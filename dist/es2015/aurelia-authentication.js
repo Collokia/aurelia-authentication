@@ -608,8 +608,9 @@ export let OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig), _dec4(_class5 =
   exchangeForToken(oauthData, userData, provider) {
     const data = extend(true, {}, userData, {
       clientId: provider.clientId,
-      redirectUri: provider.redirectUri
-    }, oauthData);
+      redirectUri: provider.redirectUri,
+      code: oauthData.code
+    });
 
     const serverUrl = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';

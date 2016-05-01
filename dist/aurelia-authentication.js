@@ -737,8 +737,9 @@ export class OAuth2 {
   exchangeForToken(oauthData, userData, provider) {
     const data = extend(true, {}, userData, {
       clientId: provider.clientId,
-      redirectUri: provider.redirectUri
-    }, oauthData);
+      redirectUri: provider.redirectUri, 
+      code: oauthData.code
+    });
 
     const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
