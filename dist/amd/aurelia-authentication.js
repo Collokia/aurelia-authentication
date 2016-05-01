@@ -594,8 +594,9 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
     OAuth2.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider) {
       var data = (0, _extend2.default)(true, {}, userData, {
         clientId: provider.clientId,
-        redirectUri: provider.redirectUri
-      }, oauthData);
+        redirectUri: provider.redirectUri,
+        code: oauthData.code
+      });
 
       var serverUrl = this.config.withBase(provider.url);
       var credentials = this.config.withCredentials ? 'include' : 'same-origin';

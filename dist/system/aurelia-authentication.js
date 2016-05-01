@@ -635,8 +635,9 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         OAuth2.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider) {
           var data = extend(true, {}, userData, {
             clientId: provider.clientId,
-            redirectUri: provider.redirectUri
-          }, oauthData);
+            redirectUri: provider.redirectUri,
+            code: oauthData.code
+          });
 
           var serverUrl = this.config.withBase(provider.url);
           var credentials = this.config.withCredentials ? 'include' : 'same-origin';
