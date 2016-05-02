@@ -777,9 +777,8 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         OAuth2.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider) {
           var data = extend(true, {}, userData, {
             clientId: provider.clientId,
-            redirectUri: provider.redirectUri,
-            code: oauthData.code
-          });
+            redirectUri: provider.redirectUri
+          }, oauthData);
 
           var serverUrl = this.config.joinBase(provider.url);
           var credentials = this.config.withCredentials ? 'include' : 'same-origin';

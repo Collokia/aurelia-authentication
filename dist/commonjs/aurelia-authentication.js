@@ -689,9 +689,8 @@ var OAuth2 = exports.OAuth2 = (_dec4 = (0, _aureliaDependencyInjection.inject)(S
   OAuth2.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider) {
     var data = (0, _extend2.default)(true, {}, userData, {
       clientId: provider.clientId,
-      redirectUri: provider.redirectUri,
-      code: oauthData.code
-    });
+      redirectUri: provider.redirectUri
+    }, oauthData);
 
     var serverUrl = this.config.joinBase(provider.url);
     var credentials = this.config.withCredentials ? 'include' : 'same-origin';
