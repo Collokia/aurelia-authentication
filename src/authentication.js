@@ -213,7 +213,7 @@ export class Authentication {
       const tokenRootData = tokenRoot && tokenRoot.split('.').reduce((o, x) => o[x], responseTokenProp);
       const token = tokenRootData ? tokenRootData[tokenName] : responseTokenProp[tokenName];
 
-      if (!token) throw new Error('Token not found in response');
+    if (!token) throw new AuthError('Token not found in response', {response});
 
       return token;
     }
