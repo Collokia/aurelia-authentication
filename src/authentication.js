@@ -6,6 +6,7 @@ import {BaseConfig}  from './baseConfig';
 import {Storage} from './storage';
 import {OAuth1} from './oAuth1';
 import {OAuth2} from './oAuth2';
+import {AuthError} from './authError';
 
 @inject(Storage, BaseConfig, OAuth1, OAuth2)
 export class Authentication {
@@ -192,7 +193,7 @@ export class Authentication {
 
     const token = response[tokenName] === undefined ? null : response[tokenName];
 
-    if (!token) throw new Error('Token not found in response');
+    if (!token) throw new AuthError('Token not found in response', {response});
 
     return token;
   }
