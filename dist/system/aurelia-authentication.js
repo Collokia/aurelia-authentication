@@ -1,7 +1,7 @@
 'use strict';
 
 System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependency-injection', 'aurelia-metadata', 'aurelia-router', 'aurelia-fetch-client', 'aurelia-api', './authFilter'], function (_export, _context) {
-  var extend, LogManager, parseQueryString, join, buildQueryString, inject, deprecated, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, BaseConfig, Storage, OAuth1, OAuth2, camelCase, Authentication, AuthService, AuthorizeStep, FetchConfig;
+  var extend, LogManager, parseQueryString, join, buildQueryString, inject, deprecated, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, AuthError, BaseConfig, Storage, OAuth1, OAuth2, camelCase, Authentication, AuthService, AuthorizeStep, FetchConfig;
 
   function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
     var desc = {};
@@ -30,6 +30,30 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
     }
 
     return desc;
+  }
+
+  function _possibleConstructorReturn(self, call) {
+    if (!self) {
+      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+    }
+
+    return call && (typeof call === "object" || typeof call === "function") ? call : self;
+  }
+
+  function _inherits(subClass, superClass) {
+    if (typeof superClass !== "function" && superClass !== null) {
+      throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+    }
+
+    subClass.prototype = Object.create(superClass && superClass.prototype, {
+      constructor: {
+        value: subClass,
+        enumerable: false,
+        writable: true,
+        configurable: true
+      }
+    });
+    if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
   }
 
   function _classCallCheck(instance, Constructor) {
@@ -250,6 +274,30 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
       parseUrl = function parseUrl(url) {
         return extend(true, {}, parseQueryString(url.search), parseQueryString(url.hash));
       };
+
+      _export('AuthError', AuthError = function (_Error) {
+        _inherits(AuthError, _Error);
+
+        function AuthError(message, data) {
+          _classCallCheck(this, AuthError);
+
+          var _this3 = _possibleConstructorReturn(this, _Error.call(this, message));
+
+          _this3.name = _this3.constructor.name;
+          _this3.message = message;
+          _this3.data = data;
+          if (typeof Error.captureStackTrace === 'function') {
+            Error.captureStackTrace(_this3, _this3.constructor);
+          } else {
+            _this3.stack = new Error(message).stack;
+          }
+          return _this3;
+        }
+
+        return AuthError;
+      }(Error));
+
+      _export('AuthError', AuthError);
 
       _export('BaseConfig', BaseConfig = function () {
         function BaseConfig() {
@@ -542,7 +590,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         }
 
         OAuth1.prototype.open = function open(options, userData) {
-          var _this3 = this;
+          var _this4 = this;
 
           var provider = extend(true, {}, this.defaults, options);
           var serverUrl = this.config.withBase(provider.url);
@@ -554,16 +602,16 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
           return this.config.client.post(serverUrl).then(function (response) {
             var url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
-            if (_this3.config.platform === 'mobile') {
-              _this3.popup = _this3.popup.open(url, provider.name, provider.popupOptions, provider.redirectUri);
+            if (_this4.config.platform === 'mobile') {
+              _this4.popup = _this4.popup.open(url, provider.name, provider.popupOptions, provider.redirectUri);
             } else {
-              _this3.popup.popupWindow.location = url;
+              _this4.popup.popupWindow.location = url;
             }
 
-            var popupListener = _this3.config.platform === 'mobile' ? _this3.popup.eventListener(provider.redirectUri) : _this3.popup.pollPopup();
+            var popupListener = _this4.config.platform === 'mobile' ? _this4.popup.eventListener(provider.redirectUri) : _this4.popup.pollPopup();
 
             return popupListener.then(function (result) {
-              return _this3.exchangeForToken(result, userData, provider);
+              return _this4.exchangeForToken(result, userData, provider);
             });
           });
         };
@@ -606,7 +654,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         }
 
         OAuth2.prototype.open = function open(options, userData) {
-          var _this4 = this;
+          var _this5 = this;
 
           var provider = extend(true, {}, this.defaults, options);
           var stateName = provider.name + '_state';
@@ -625,10 +673,10 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
             if (provider.responseType === 'token' || provider.responseType === 'id_token%20token' || provider.responseType === 'token%20id_token') {
               return oauthData;
             }
-            if (oauthData.state && oauthData.state !== _this4.storage.get(stateName)) {
+            if (oauthData.state && oauthData.state !== _this5.storage.get(stateName)) {
               return Promise.reject('OAuth 2.0 state parameter mismatch.');
             }
-            return _this4.exchangeForToken(oauthData, userData, provider);
+            return _this5.exchangeForToken(oauthData, userData, provider);
           });
         };
 
@@ -645,7 +693,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         };
 
         OAuth2.prototype.buildQuery = function buildQuery(provider) {
-          var _this5 = this;
+          var _this6 = this;
 
           var query = {};
           var urlParams = ['defaultUrlParams', 'requiredUrlParams', 'optionalUrlParams'];
@@ -656,7 +704,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
               var paramValue = typeof provider[paramName] === 'function' ? provider[paramName]() : provider[camelizedName];
 
               if (paramName === 'state') {
-                paramValue = encodeURIComponent(_this5.storage.get(provider.name + '_state'));
+                paramValue = encodeURIComponent(_this6.storage.get(provider.name + '_state'));
               }
 
               if (paramName === 'scope' && Array.isArray(paramValue)) {
@@ -836,16 +884,16 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
           var token = response[tokenName] === undefined ? null : response[tokenName];
 
-          if (!token) throw new Error('Token not found in response');
+          if (!token) throw new AuthError('Token not found in response', { response: response });
 
           return token;
         };
 
         Authentication.prototype.toUpdateTokenCallstack = function toUpdateTokenCallstack() {
-          var _this6 = this;
+          var _this7 = this;
 
           return new Promise(function (resolve) {
-            return _this6.updateTokenCallstack.push(resolve);
+            return _this7.updateTokenCallstack.push(resolve);
           });
         };
 
@@ -962,7 +1010,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         };
 
         AuthService.prototype.updateToken = function updateToken() {
-          var _this7 = this;
+          var _this8 = this;
 
           if (!this.authentication.getRefreshToken()) {
             return Promise.reject(new Error('refreshToken not set'));
@@ -976,11 +1024,11 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
             };
 
             this.client.post(this.config.withBase(this.config.loginUrl), content).then(function (response) {
-              _this7.authentication.responseObject = response;
-              _this7.authentication.resolveUpdateTokenCallstack(_this7.authentication.isAuthenticated());
+              _this8.authentication.responseObject = response;
+              _this8.authentication.resolveUpdateTokenCallstack(_this8.authentication.isAuthenticated());
             }).catch(function (err) {
-              _this7.authentication.responseObject = null;
-              _this7.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
+              _this8.authentication.responseObject = null;
+              _this8.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
             });
           }
 
@@ -988,7 +1036,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         };
 
         AuthService.prototype.signup = function signup(displayName, email, password, options, redirectUri) {
-          var _this8 = this;
+          var _this9 = this;
 
           var content = void 0;
 
@@ -1004,17 +1052,17 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
             };
           }
           return this.client.post(this.config.withBase(this.config.signupUrl), content, options).then(function (response) {
-            if (_this8.config.loginOnSignup) {
-              _this8.authentication.responseObject = response;
+            if (_this9.config.loginOnSignup) {
+              _this9.authentication.responseObject = response;
             }
-            _this8.authentication.redirect(redirectUri, _this8.config.signupRedirect);
+            _this9.authentication.redirect(redirectUri, _this9.config.signupRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.login = function login(email, password, options, redirectUri) {
-          var _this9 = this;
+          var _this10 = this;
 
           var content = void 0;
 
@@ -1035,46 +1083,46 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
           }
 
           return this.client.post(this.config.withBase(this.config.loginUrl), content, options).then(function (response) {
-            _this9.authentication.responseObject = response;
+            _this10.authentication.responseObject = response;
 
-            _this9.authentication.redirect(redirectUri, _this9.config.loginRedirect);
+            _this10.authentication.redirect(redirectUri, _this10.config.loginRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.logout = function logout(redirectUri) {
-          var _this10 = this;
+          var _this11 = this;
 
           return new Promise(function (resolve) {
-            _this10.authentication.responseObject = null;
+            _this11.authentication.responseObject = null;
 
-            _this10.authentication.redirect(redirectUri, _this10.config.logoutRedirect);
+            _this11.authentication.redirect(redirectUri, _this11.config.logoutRedirect);
 
             resolve();
           });
         };
 
         AuthService.prototype.authenticate = function authenticate(name, redirectUri) {
-          var _this11 = this;
+          var _this12 = this;
 
           var userData = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
 
           return this.authentication.authenticate(name, userData).then(function (response) {
-            _this11.authentication.responseObject = response;
+            _this12.authentication.responseObject = response;
 
-            _this11.authentication.redirect(redirectUri, _this11.config.loginRedirect);
+            _this12.authentication.redirect(redirectUri, _this12.config.loginRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.unlink = function unlink(name, redirectUri) {
-          var _this12 = this;
+          var _this13 = this;
 
           var unlinkUrl = this.config.withBase(this.config.unlinkUrl) + name;
           return this.client.request(this.config.unlinkMethod, unlinkUrl).then(function (response) {
-            _this12.authentication.redirect(redirectUri);
+            _this13.authentication.redirect(redirectUri);
 
             return response;
           });
@@ -1140,13 +1188,13 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         }
 
         FetchConfig.prototype.configure = function configure(client) {
-          var _this13 = this;
+          var _this14 = this;
 
           if (Array.isArray(client)) {
             var _ret = function () {
               var configuredClients = [];
               client.forEach(function (toConfigure) {
-                configuredClients.push(_this13.configure(toConfigure));
+                configuredClients.push(_this14.configure(toConfigure));
               });
 
               return {
@@ -1177,20 +1225,20 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
         _createClass(FetchConfig, [{
           key: 'interceptor',
           get: function get() {
-            var _this14 = this;
+            var _this15 = this;
 
             return {
               request: function request(_request) {
-                if (!_this14.config.httpInterceptor || !_this14.authService.isAuthenticated()) {
+                if (!_this15.config.httpInterceptor || !_this15.authService.isAuthenticated()) {
                   return _request;
                 }
-                var token = _this14.authService.getAccessToken();
+                var token = _this15.authService.getAccessToken();
 
-                if (_this14.config.authTokenType) {
-                  token = _this14.config.authTokenType + ' ' + token;
+                if (_this15.config.authTokenType) {
+                  token = _this15.config.authTokenType + ' ' + token;
                 }
 
-                _request.headers.set(_this14.config.authHeader, token);
+                _request.headers.set(_this15.config.authHeader, token);
 
                 return _request;
               },
@@ -1202,23 +1250,23 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
                   if (_response.status !== 401) {
                     return resolve(_response);
                   }
-                  if (!_this14.config.httpInterceptor || !_this14.authService.isTokenExpired()) {
+                  if (!_this15.config.httpInterceptor || !_this15.authService.isTokenExpired()) {
                     return resolve(_response);
                   }
-                  if (!_this14.config.useRefreshToken || !_this14.authService.getRefreshToken()) {
+                  if (!_this15.config.useRefreshToken || !_this15.authService.getRefreshToken()) {
                     return resolve(_response);
                   }
 
-                  _this14.authService.updateToken().then(function () {
-                    var token = _this14.authService.getAccessToken();
+                  _this15.authService.updateToken().then(function () {
+                    var token = _this15.authService.getAccessToken();
 
-                    if (_this14.config.authTokenType) {
-                      token = _this14.config.authTokenType + ' ' + token;
+                    if (_this15.config.authTokenType) {
+                      token = _this15.config.authTokenType + ' ' + token;
                     }
 
-                    request.headers.set(_this14.config.authHeader, token);
+                    request.headers.set(_this15.config.authHeader, token);
 
-                    return _this14.client.fetch(request).then(resolve);
+                    return _this15.client.fetch(request).then(resolve);
                   });
                 });
               }

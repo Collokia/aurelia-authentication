@@ -144,6 +144,9 @@ declare module 'aurelia-authentication' {
   export class AuthFilterValueConverter {
     toView(routes: any, isAuthenticated: any): any;
   }
+  export class AuthError extends Error {
+    constructor(message: any, data: any);
+  }
   export class Storage {
     constructor(config: any);
     get(key: any): any;
