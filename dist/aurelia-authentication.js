@@ -131,6 +131,19 @@ const parseUrl = url => {
   return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
 
+export class AuthError extends Error{
+    constructor(message, data) {
+        super(message);
+        this.name = this.constructor.name;
+        this.message = message;
+        this.data = data;
+        if (typeof Error.captureStackTrace === 'function') {
+            Error.captureStackTrace(this, this.constructor);
+        } else {
+            this.stack = (new Error(message)).stack;
+        }
+    }
+}
 export class BaseConfig {
   /**
    * Prepends baseUrl to a given url
@@ -1022,7 +1035,7 @@ export class Authentication {
 
     const token = response[tokenName] === undefined ? null : response[tokenName];
 
-    if (!token) throw new Error('Token not found in response');
+    if (!token) throw new AuthError('Token not found in response', {response});
 
     return token;
   }
