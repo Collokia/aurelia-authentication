@@ -1,16 +1,18 @@
 import {inject} from 'aurelia-dependency-injection';
 import {buildQueryString} from 'aurelia-path';
+import {EventAggregator} from 'aurelia-event-aggregator';
 import extend from 'extend';
 
 import {Storage} from './storage';
 import {Popup} from './popup';
 import {BaseConfig} from './baseConfig';
 
-@inject(Storage, Popup, BaseConfig)
+@inject(Storage, Popup, BaseConfig, EventAggregator)
 export class OAuth2 {
-  constructor(storage, popup, config) {
+  constructor(storage, popup, config, ea) {
     this.storage      = storage;
     this.config       = config;
+    this.ea           = ea;
     this.popup        = popup;
     this.defaults     = {
       url: null,
@@ -33,6 +35,8 @@ export class OAuth2 {
     const provider  = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
+    this.ea.publish('aurelia-authentication:open', {options, userData});
+    
     if (typeof provider.state === 'function') {
       this.storage.set(stateName, provider.state());
     } else if (typeof provider.state === 'string') {
@@ -69,7 +73,7 @@ export class OAuth2 {
 
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 

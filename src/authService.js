@@ -1,15 +1,17 @@
 import {inject} from 'aurelia-dependency-injection';
 import {deprecated} from 'aurelia-metadata';
 import * as LogManager from 'aurelia-logging';
+import {EventAggregator} from 'aurelia-event-aggregator';
 
 import {Authentication} from './authentication';
 import {BaseConfig} from './baseConfig';
 
-@inject(Authentication, BaseConfig)
+@inject(Authentication, BaseConfig, EventAggregator)
 export class AuthService {
-  constructor(authentication, config) {
+  constructor(authentication, config, ea) {
     this.authentication = authentication;
     this.config         = config;
+    this.ea = ea
   }
 
   /**
@@ -261,8 +263,10 @@ export class AuthService {
    * @return {Promise<response>}
    */
   authenticate(name, redirectUri, userData = {}) {
+    this.ea.publish('aurelia-authentication:started', {name, redirectUri, userData});
     return this.authentication.authenticate(name, userData)
       .then(response => {
+        this.ea.publish('aurelia-authentication:completed', {name, redirectUri, userData});
         this.authentication.responseObject = response;
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
