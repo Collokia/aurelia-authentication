@@ -1,4 +1,4 @@
-define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependency-injection', 'aurelia-metadata', 'aurelia-router', 'aurelia-fetch-client', 'aurelia-api', './authFilter'], function (exports, _extend, _aureliaLogging, _aureliaPath, _aureliaDependencyInjection, _aureliaMetadata, _aureliaRouter, _aureliaFetchClient, _aureliaApi) {
+define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependency-injection', 'aurelia-event-aggregator', 'aurelia-metadata', 'aurelia-router', 'aurelia-fetch-client', 'aurelia-api', './authFilter'], function (exports, _extend, _aureliaLogging, _aureliaPath, _aureliaDependencyInjection, _aureliaEventAggregator, _aureliaMetadata, _aureliaRouter, _aureliaFetchClient, _aureliaApi) {
   'use strict';
 
   Object.defineProperty(exports, "__esModule", {
@@ -533,12 +533,13 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
 
     return Storage;
   }()) || _class2);
-  var OAuth1 = exports.OAuth1 = (_dec2 = (0, _aureliaDependencyInjection.inject)(Storage, Popup, BaseConfig), _dec2(_class3 = function () {
-    function OAuth1(storage, popup, config) {
+  var OAuth1 = exports.OAuth1 = (_dec2 = (0, _aureliaDependencyInjection.inject)(Storage, Popup, BaseConfig, _aureliaEventAggregator.EventAggregator), _dec2(_class3 = function () {
+    function OAuth1(storage, popup, config, ea) {
       _classCallCheck(this, OAuth1);
 
       this.storage = storage;
       this.config = config;
+      this.ea = ea;
       this.popup = popup;
       this.defaults = {
         url: null,
@@ -580,18 +581,19 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
       var data = (0, _extend2.default)(true, {}, userData, oauthData);
       var serverUrl = this.config.withBase(provider.url);
       var credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+      this.ea.publish('aurelia-authentication:exchangeForToken', {});
       return this.config.client.post(serverUrl, data, { credentials: credentials });
     };
 
     return OAuth1;
   }()) || _class3);
-  var OAuth2 = exports.OAuth2 = (_dec3 = (0, _aureliaDependencyInjection.inject)(Storage, Popup, BaseConfig), _dec3(_class4 = function () {
-    function OAuth2(storage, popup, config) {
+  var OAuth2 = exports.OAuth2 = (_dec3 = (0, _aureliaDependencyInjection.inject)(Storage, Popup, BaseConfig, _aureliaEventAggregator.EventAggregator), _dec3(_class4 = function () {
+    function OAuth2(storage, popup, config, ea) {
       _classCallCheck(this, OAuth2);
 
       this.storage = storage;
       this.config = config;
+      this.ea = ea;
       this.popup = popup;
       this.defaults = {
         url: null,
@@ -615,6 +617,8 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
 
       var provider = (0, _extend2.default)(true, {}, this.defaults, options);
       var stateName = provider.name + '_state';
+
+      this.ea.publish('aurelia-authentication:open', { options: options, userData: userData });
 
       if (typeof provider.state === 'function') {
         this.storage.set(stateName, provider.state());
@@ -645,7 +649,7 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
 
       var serverUrl = this.config.withBase(provider.url);
       var credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+      this.ea.publish('aurelia-authentication:exchangeForToken', {});
       return this.config.client.post(serverUrl, data, { credentials: credentials });
     };
 
@@ -905,12 +909,13 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
 
     return Authentication;
   }(), (_applyDecoratedDescriptor(_class6.prototype, 'getLoginRoute', [_dec5], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRoute'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginRedirect', [_dec6], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRedirect'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginUrl', [_dec7], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getSignupUrl', [_dec8], Object.getOwnPropertyDescriptor(_class6.prototype, 'getSignupUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getProfileUrl', [_dec9], Object.getOwnPropertyDescriptor(_class6.prototype, 'getProfileUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getToken', [_dec10], Object.getOwnPropertyDescriptor(_class6.prototype, 'getToken'), _class6.prototype)), _class6)) || _class5);
-  var AuthService = exports.AuthService = (_dec11 = (0, _aureliaDependencyInjection.inject)(Authentication, BaseConfig), _dec12 = (0, _aureliaMetadata.deprecated)({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = function () {
-    function AuthService(authentication, config) {
+  var AuthService = exports.AuthService = (_dec11 = (0, _aureliaDependencyInjection.inject)(Authentication, BaseConfig, _aureliaEventAggregator.EventAggregator), _dec12 = (0, _aureliaMetadata.deprecated)({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = function () {
+    function AuthService(authentication, config, ea) {
       _classCallCheck(this, AuthService);
 
       this.authentication = authentication;
       this.config = config;
+      this.ea = ea;
     }
 
     AuthService.prototype.getMe = function getMe(criteria) {
@@ -1061,7 +1066,9 @@ define(['exports', 'extend', 'aurelia-logging', 'aurelia-path', 'aurelia-depende
 
       var userData = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
 
+      this.ea.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
       return this.authentication.authenticate(name, userData).then(function (response) {
+        _this12.ea.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
         _this12.authentication.responseObject = response;
 
         _this12.authentication.redirect(redirectUri, _this12.config.loginRedirect);

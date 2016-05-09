@@ -1,7 +1,7 @@
 'use strict';
 
-System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependency-injection', 'aurelia-metadata', 'aurelia-router', 'aurelia-fetch-client', 'aurelia-api', './authFilter'], function (_export, _context) {
-  var extend, LogManager, parseQueryString, join, buildQueryString, inject, deprecated, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, AuthError, BaseConfig, Storage, OAuth1, OAuth2, camelCase, Authentication, AuthService, AuthorizeStep, FetchConfig;
+System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependency-injection', 'aurelia-event-aggregator', 'aurelia-metadata', 'aurelia-router', 'aurelia-fetch-client', 'aurelia-api', './authFilter'], function (_export, _context) {
+  var extend, LogManager, parseQueryString, join, buildQueryString, inject, EventAggregator, deprecated, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, AuthError, BaseConfig, Storage, OAuth1, OAuth2, camelCase, Authentication, AuthService, AuthorizeStep, FetchConfig;
 
   function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
     var desc = {};
@@ -114,6 +114,8 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
       buildQueryString = _aureliaPath.buildQueryString;
     }, function (_aureliaDependencyInjection) {
       inject = _aureliaDependencyInjection.inject;
+    }, function (_aureliaEventAggregator) {
+      EventAggregator = _aureliaEventAggregator.EventAggregator;
     }, function (_aureliaMetadata) {
       deprecated = _aureliaMetadata.deprecated;
     }, function (_aureliaRouter) {
@@ -573,12 +575,13 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
       _export('Storage', Storage);
 
-      _export('OAuth1', OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 = function () {
-        function OAuth1(storage, popup, config) {
+      _export('OAuth1', OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec2(_class3 = function () {
+        function OAuth1(storage, popup, config, ea) {
           _classCallCheck(this, OAuth1);
 
           this.storage = storage;
           this.config = config;
+          this.ea = ea;
           this.popup = popup;
           this.defaults = {
             url: null,
@@ -620,7 +623,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
           var data = extend(true, {}, userData, oauthData);
           var serverUrl = this.config.withBase(provider.url);
           var credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+          this.ea.publish('aurelia-authentication:exchangeForToken', {});
           return this.config.client.post(serverUrl, data, { credentials: credentials });
         };
 
@@ -629,12 +632,13 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
       _export('OAuth1', OAuth1);
 
-      _export('OAuth2', OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 = function () {
-        function OAuth2(storage, popup, config) {
+      _export('OAuth2', OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec3(_class4 = function () {
+        function OAuth2(storage, popup, config, ea) {
           _classCallCheck(this, OAuth2);
 
           this.storage = storage;
           this.config = config;
+          this.ea = ea;
           this.popup = popup;
           this.defaults = {
             url: null,
@@ -658,6 +662,8 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
           var provider = extend(true, {}, this.defaults, options);
           var stateName = provider.name + '_state';
+
+          this.ea.publish('aurelia-authentication:open', { options: options, userData: userData });
 
           if (typeof provider.state === 'function') {
             this.storage.set(stateName, provider.state());
@@ -688,7 +694,7 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
           var serverUrl = this.config.withBase(provider.url);
           var credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+          this.ea.publish('aurelia-authentication:exchangeForToken', {});
           return this.config.client.post(serverUrl, data, { credentials: credentials });
         };
 
@@ -952,12 +958,13 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
       _export('Authentication', Authentication);
 
-      _export('AuthService', _export('AuthService', AuthService = (_dec11 = inject(Authentication, BaseConfig), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = function () {
-        function AuthService(authentication, config) {
+      _export('AuthService', _export('AuthService', AuthService = (_dec11 = inject(Authentication, BaseConfig, EventAggregator), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = function () {
+        function AuthService(authentication, config, ea) {
           _classCallCheck(this, AuthService);
 
           this.authentication = authentication;
           this.config = config;
+          this.ea = ea;
         }
 
         AuthService.prototype.getMe = function getMe(criteria) {
@@ -1108,7 +1115,9 @@ System.register(['extend', 'aurelia-logging', 'aurelia-path', 'aurelia-dependenc
 
           var userData = arguments.length <= 2 || arguments[2] === undefined ? {} : arguments[2];
 
+          this.ea.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
           return this.authentication.authenticate(name, userData).then(function (response) {
+            _this12.ea.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
             _this12.authentication.responseObject = response;
 
             _this12.authentication.redirect(redirectUri, _this12.config.loginRedirect);

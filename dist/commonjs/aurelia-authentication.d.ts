@@ -154,12 +154,12 @@ declare module 'aurelia-authentication' {
     remove(key: any): any;
   }
   export class OAuth1 {
-    constructor(storage: any, popup: any, config: any);
+    constructor(storage: any, popup: any, config: any, ea: any);
     open(options: any, userData: any): any;
     exchangeForToken(oauthData: any, userData: any, provider: any): any;
   }
   export class OAuth2 {
-    constructor(storage: any, popup: any, config: any);
+    constructor(storage: any, popup: any, config: any, ea: any);
     open(options: any, userData: any): any;
     exchangeForToken(oauthData: any, userData: any, provider: any): any;
     buildQuery(provider: any): any;
@@ -208,7 +208,7 @@ declare module 'aurelia-authentication' {
     redirect(redirectUrl: any, defaultRedirectUrl: any): any;
   }
   export class AuthService {
-    constructor(authentication: any, config: any);
+    constructor(authentication: any, config: any, ea: any);
     
     /**
        * Getter: The configured client for all aurelia-authentication requests

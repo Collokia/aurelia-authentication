@@ -2,6 +2,7 @@ import extend from 'extend';
 import * as LogManager from 'aurelia-logging';
 import {parseQueryString,join,buildQueryString} from 'aurelia-path';
 import {inject} from 'aurelia-dependency-injection';
+import {EventAggregator} from 'aurelia-event-aggregator';
 import {deprecated} from 'aurelia-metadata';
 import {Redirect} from 'aurelia-router';
 import {HttpClient} from 'aurelia-fetch-client';
@@ -468,11 +469,12 @@ export class Storage {
   }
 }
 
-@inject(Storage, Popup, BaseConfig)
+@inject(Storage, Popup, BaseConfig, EventAggregator)
 export class OAuth1 {
-  constructor(storage, popup, config) {
+  constructor(storage, popup, config, ea) {
     this.storage  = storage;
     this.config   = config;
+    this.ea   = ea;
     this.popup    = popup;
     this.defaults = {
       url: null,
@@ -513,16 +515,17 @@ export class OAuth1 {
     const data        = extend(true, {}, userData, oauthData);
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 }
 
-@inject(Storage, Popup, BaseConfig)
+@inject(Storage, Popup, BaseConfig, EventAggregator)
 export class OAuth2 {
-  constructor(storage, popup, config) {
+  constructor(storage, popup, config, ea) {
     this.storage      = storage;
     this.config       = config;
+    this.ea           = ea;
     this.popup        = popup;
     this.defaults     = {
       url: null,
@@ -545,6 +548,8 @@ export class OAuth2 {
     const provider  = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
+    this.ea.publish('aurelia-authentication:open', {options, userData});
+    
     if (typeof provider.state === 'function') {
       this.storage.set(stateName, provider.state());
     } else if (typeof provider.state === 'string') {
@@ -581,7 +586,7 @@ export class OAuth2 {
 
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 
@@ -858,11 +863,12 @@ export class Authentication {
   }
 }
 
-@inject(Authentication, BaseConfig)
+@inject(Authentication, BaseConfig, EventAggregator)
 export class AuthService {
-  constructor(authentication, config) {
+  constructor(authentication, config, ea) {
     this.authentication = authentication;
     this.config         = config;
+    this.ea = ea
   }
 
   /**
@@ -1111,8 +1117,10 @@ export class AuthService {
    * @return {Promise<response>}
    */
   authenticate(name, redirectUri, userData = {}) {
+    this.ea.publish('aurelia-authentication:started', {name, redirectUri, userData});
     return this.authentication.authenticate(name, userData)
       .then(response => {
+        this.ea.publish('aurelia-authentication:completed', {name, redirectUri, userData});
         this.authentication.responseObject = response;
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);

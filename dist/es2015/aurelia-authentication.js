@@ -33,6 +33,7 @@ import extend from 'extend';
 import * as LogManager from 'aurelia-logging';
 import { parseQueryString, join, buildQueryString } from 'aurelia-path';
 import { inject } from 'aurelia-dependency-injection';
+import { EventAggregator } from 'aurelia-event-aggregator';
 import { deprecated } from 'aurelia-metadata';
 import { Redirect } from 'aurelia-router';
 import { HttpClient } from 'aurelia-fetch-client';
@@ -419,10 +420,11 @@ export let Storage = (_dec = inject(BaseConfig), _dec(_class2 = class Storage {
   }
 }) || _class2);
 
-export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 = class OAuth1 {
-  constructor(storage, popup, config) {
+export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec2(_class3 = class OAuth1 {
+  constructor(storage, popup, config, ea) {
     this.storage = storage;
     this.config = config;
+    this.ea = ea;
     this.popup = popup;
     this.defaults = {
       url: null,
@@ -460,15 +462,16 @@ export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 =
     const data = extend(true, {}, userData, oauthData);
     const serverUrl = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken', {});
     return this.config.client.post(serverUrl, data, { credentials: credentials });
   }
 }) || _class3);
 
-export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 = class OAuth2 {
-  constructor(storage, popup, config) {
+export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec3(_class4 = class OAuth2 {
+  constructor(storage, popup, config, ea) {
     this.storage = storage;
     this.config = config;
+    this.ea = ea;
     this.popup = popup;
     this.defaults = {
       url: null,
@@ -490,6 +493,8 @@ export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 =
   open(options, userData) {
     const provider = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
+
+    this.ea.publish('aurelia-authentication:open', { options, userData });
 
     if (typeof provider.state === 'function') {
       this.storage.set(stateName, provider.state());
@@ -520,7 +525,7 @@ export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 =
 
     const serverUrl = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken', {});
     return this.config.client.post(serverUrl, data, { credentials: credentials });
   }
 
@@ -762,10 +767,11 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
   }
 }, (_applyDecoratedDescriptor(_class6.prototype, 'getLoginRoute', [_dec5], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRoute'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginRedirect', [_dec6], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRedirect'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginUrl', [_dec7], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getSignupUrl', [_dec8], Object.getOwnPropertyDescriptor(_class6.prototype, 'getSignupUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getProfileUrl', [_dec9], Object.getOwnPropertyDescriptor(_class6.prototype, 'getProfileUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getToken', [_dec10], Object.getOwnPropertyDescriptor(_class6.prototype, 'getToken'), _class6.prototype)), _class6)) || _class5);
 
-export let AuthService = (_dec11 = inject(Authentication, BaseConfig), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = class AuthService {
-  constructor(authentication, config) {
+export let AuthService = (_dec11 = inject(Authentication, BaseConfig, EventAggregator), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = class AuthService {
+  constructor(authentication, config, ea) {
     this.authentication = authentication;
     this.config = config;
+    this.ea = ea;
   }
 
   get client() {
@@ -913,7 +919,9 @@ export let AuthService = (_dec11 = inject(Authentication, BaseConfig), _dec12 = 
   }
 
   authenticate(name, redirectUri, userData = {}) {
+    this.ea.publish('aurelia-authentication:started', { name, redirectUri, userData });
     return this.authentication.authenticate(name, userData).then(response => {
+      this.ea.publish('aurelia-authentication:completed', { name, redirectUri, userData });
       this.authentication.responseObject = response;
 
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
