@@ -2,6 +2,7 @@ import extend from 'extend';
 import * as LogManager from 'aurelia-logging';
 import {parseQueryString,join,buildQueryString} from 'aurelia-path';
 import {inject} from 'aurelia-dependency-injection';
+import {EventAggregator} from 'aurelia-event-aggregator';
 import {deprecated} from 'aurelia-metadata';
 import {Redirect} from 'aurelia-router';
 import {HttpClient} from 'aurelia-fetch-client';
@@ -14,7 +15,7 @@ export class Popup {
     this.url         = '';
   }
 
-  open(url, windowName, options, redirectUri) {
+  open(url, windowName, options) {
     this.url = url;
     const optionsString = buildPopupWindowOptions(options || {});
 
@@ -192,6 +193,10 @@ export class BaseConfig {
   baseUrl = '';
   // The API endpoint to which login requests are sent
   loginUrl = '/auth/login';
+  // The API endpoint to which logout requests are sent (not needed for jwt)
+  logoutUrl = null;
+  // The HTTP method used for 'unlink' requests (Options: 'get' or 'post')
+  logoutMethod = 'get';
   // The API endpoint to which signup requests are sent
   signupUrl = '/auth/signup';
   // The API endpoint used in profile requests (inc. `find/get` and `update`)
@@ -261,122 +266,121 @@ export class BaseConfig {
   //OAuth provider specific related configuration
   // ============================================
   providers = {
+    facebook: {
+      name: 'facebook',
+      url: '/auth/facebook',
+      authorizationEndpoint: 'https://www.facebook.com/v2.5/dialog/oauth',
+      redirectUri: window.location.origin + '/',
+      requiredUrlParams: ['display', 'scope'],
+      scope: ['email'],
+      scopeDelimiter: ',',
+      display: 'popup',
+      oauthType: '2.0',
+      popupOptions: { width: 580, height: 400 }
+    },
     google: {
       name: 'google',
       url: '/auth/google',
       authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
+      redirectUri: window.location.origin,
+      requiredUrlParams: ['scope'],
+      optionalUrlParams: ['display', 'state'],
       scope: ['profile', 'email'],
       scopePrefix: 'openid',
       scopeDelimiter: ' ',
-      requiredUrlParams: ['scope'],
-      optionalUrlParams: ['display'],
       display: 'popup',
-      type: '2.0',
-      popupOptions: {
-        width: 452,
-        height: 633
-      }
-    },
-    facebook: {
-      name: 'facebook',
-      url: '/auth/facebook',
-      authorizationEndpoint: 'https://www.facebook.com/v2.3/dialog/oauth',
-      redirectUri: encodeURI(window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/'),
-      scope: ['email'],
-      scopeDelimiter: ',',
-      nonce: function() {
-        return Math.random();
-      },
-      requiredUrlParams: ['nonce', 'display', 'scope'],
-      display: 'popup',
-      type: '2.0',
-      popupOptions: {
-        width: 580,
-        height: 400
-      }
-    },
-    linkedin: {
-      name: 'linkedin',
-      url: '/auth/linkedin',
-      authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
-      requiredUrlParams: ['state'],
-      scope: ['r_emailaddress'],
-      scopeDelimiter: ' ',
-      state: 'STATE',
-      type: '2.0',
-      popupOptions: {
-        width: 527,
-        height: 582
+      oauthType: '2.0',
+      popupOptions: { width: 452, height: 633 },
+      state: function() {
+        let rand = Math.random().toString(36).substr(2);
+        return encodeURIComponent(rand);
       }
     },
     github: {
       name: 'github',
       url: '/auth/github',
       authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
+      redirectUri: window.location.origin,
       optionalUrlParams: ['scope'],
       scope: ['user:email'],
       scopeDelimiter: ' ',
-      type: '2.0',
-      popupOptions: {
-        width: 1020,
-        height: 618
-      }
-    },
-    yahoo: {
-      name: 'yahoo',
-      url: '/auth/yahoo',
-      authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
-      scope: [],
-      scopeDelimiter: ',',
-      type: '2.0',
-      popupOptions: {
-        width: 559,
-        height: 519
-      }
-    },
-    twitter: {
-      name: 'twitter',
-      url: '/auth/twitter',
-      authorizationEndpoint: 'https://api.twitter.com/oauth/authenticate',
-      type: '1.0',
-      popupOptions: {
-        width: 495,
-        height: 645
-      }
-    },
-    live: {
-      name: 'live',
-      url: '/auth/live',
-      authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
-      scope: ['wl.emails'],
-      scopeDelimiter: ' ',
-      requiredUrlParams: ['display', 'scope'],
-      display: 'popup',
-      type: '2.0',
-      popupOptions: {
-        width: 500,
-        height: 560
-      }
+      oauthType: '2.0',
+      popupOptions: { width: 1020, height: 618 }
     },
     instagram: {
       name: 'instagram',
       url: '/auth/instagram',
       authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-      redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
+      redirectUri: window.location.origin,
       requiredUrlParams: ['scope'],
       scope: ['basic'],
       scopeDelimiter: '+',
+      oauthType: '2.0'
+    },
+    linkedin: {
+      name: 'linkedin',
+      url: '/auth/linkedin',
+      authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
+      redirectUri: window.location.origin,
+      requiredUrlParams: ['state'],
+      scope: ['r_emailaddress'],
+      scopeDelimiter: ' ',
+      state: 'STATE',
+      oauthType: '2.0',
+      popupOptions: { width: 527, height: 582 }
+    },
+    twitter: {
+      name: 'twitter',
+      url: '/auth/twitter',
+      authorizationEndpoint: 'https://api.twitter.com/oauth/authenticate',
+      redirectUri: window.location.origin,
+      oauthType: '1.0',
+      popupOptions: { width: 495, height: 645 }
+    },
+    twitch: {
+      name: 'twitch',
+      url: '/auth/twitch',
+      authorizationEndpoint: 'https://api.twitch.tv/kraken/oauth2/authorize',
+      redirectUri: window.location.origin,
+      requiredUrlParams: ['scope'],
+      scope: ['user_read'],
+      scopeDelimiter: ' ',
       display: 'popup',
-      type: '2.0',
-      popupOptions: {
-        width: 550,
-        height: 369
-      }
+      oauthType: '2.0',
+      popupOptions: { width: 500, height: 560 }
+    },
+    live: {
+      name: 'live',
+      url: '/auth/live',
+      authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
+      redirectUri: window.location.origin,
+      requiredUrlParams: ['display', 'scope'],
+      scope: ['wl.emails'],
+      scopeDelimiter: ' ',
+      display: 'popup',
+      oauthType: '2.0',
+      popupOptions: { width: 500, height: 560 }
+    },
+    yahoo: {
+      name: 'yahoo',
+      url: '/auth/yahoo',
+      authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
+      redirectUri: window.location.origin,
+      scope: [],
+      scopeDelimiter: ',',
+      oauthType: '2.0',
+      popupOptions: { width: 559, height: 519 }
+    },
+    bitbucket: {
+      name: 'bitbucket',
+      url: '/auth/bitbucket',
+      authorizationEndpoint: 'https://bitbucket.org/site/oauth2/authorize',
+      redirectUri: window.location.origin + '/',
+      requiredUrlParams: ['scope'],
+      scope: ['email'],
+      scopeDelimiter: ' ',
+      oauthType: '2.0',
+      popupOptions: { width: 1028, height: 529 }
     }
   };
 
@@ -468,11 +472,12 @@ export class Storage {
   }
 }
 
-@inject(Storage, Popup, BaseConfig)
+@inject(Storage, Popup, BaseConfig, EventAggregator)
 export class OAuth1 {
-  constructor(storage, popup, config) {
+  constructor(storage, popup, config, ea) {
     this.storage  = storage;
     this.config   = config;
+    this.ea   = ea;
     this.popup    = popup;
     this.defaults = {
       url: null,
@@ -488,7 +493,7 @@ export class OAuth1 {
     const serverUrl = this.config.withBase(provider.url);
 
     if (this.config.platform !== 'mobile') {
-      this.popup = this.popup.open('', provider.name, provider.popupOptions, provider.redirectUri);
+      this.popup = this.popup.open('', provider.name, provider.popupOptions);
     }
 
     return this.config.client.post(serverUrl)
@@ -496,7 +501,7 @@ export class OAuth1 {
         const url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
         if (this.config.platform === 'mobile') {
-          this.popup = this.popup.open(url, provider.name, provider.popupOptions,  provider.redirectUri);
+          this.popup = this.popup.open(url, provider.name, provider.popupOptions);
         } else {
           this.popup.popupWindow.location = url;
         }
@@ -513,16 +518,17 @@ export class OAuth1 {
     const data        = extend(true, {}, userData, oauthData);
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 }
 
-@inject(Storage, Popup, BaseConfig)
+@inject(Storage, Popup, BaseConfig, EventAggregator)
 export class OAuth2 {
-  constructor(storage, popup, config) {
+  constructor(storage, popup, config, ea) {
     this.storage      = storage;
     this.config       = config;
+    this.ea           = ea;
     this.popup        = popup;
     this.defaults     = {
       url: null,
@@ -545,6 +551,8 @@ export class OAuth2 {
     const provider  = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
+    this.ea.publish('aurelia-authentication:open', {options, userData});
+    
     if (typeof provider.state === 'function') {
       this.storage.set(stateName, provider.state());
     } else if (typeof provider.state === 'string') {
@@ -553,7 +561,7 @@ export class OAuth2 {
 
     const url       = provider.authorizationEndpoint
                     + '?' + buildQueryString(this.buildQuery(provider));
-    const popup     = this.popup.open(url, provider.name, provider.popupOptions, provider.redirectUri);
+    const popup     = this.popup.open(url, provider.name, provider.popupOptions);
     const openPopup = (this.config.platform === 'mobile')
                     ? popup.eventListener(provider.redirectUri)
                     : popup.pollPopup();
@@ -581,7 +589,7 @@ export class OAuth2 {
 
     const serverUrl   = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 
@@ -831,9 +839,17 @@ export class Authentication {
    * @return {Promise<response>}
    */
   authenticate(name, userData = {}) {
-    const provider = this.config.providers[name].type === '1.0' ? this.oAuth1 : this.oAuth2;
+    let oauthType = this.config.providers[name].type;
 
-    return provider.open(this.config.providers[name], userData);
+    if (oauthType) {
+      LogManager.getLogger('authentication').warn('DEPRECATED: Setting provider.type is deprecated and replaced by provider.oauthType');
+    } else {
+      oauthType = this.config.providers[name].oauthType;
+    }
+
+    const providerLogin = oauthType === '1.0' ? this.oAuth1 : this.oAuth2;
+
+    return providerLogin.open(this.config.providers[name], userData);
   }
 
   redirect(redirectUrl, defaultRedirectUrl) {
@@ -858,33 +874,12 @@ export class Authentication {
   }
 }
 
-@inject(Authentication)
-export class AuthorizeStep {
-  constructor(authentication) {
-    this.authentication = authentication;
-  }
-
-  run(routingContext, next) {
-    const isLoggedIn = this.authentication.isAuthenticated();
-    const loginRoute = this.authentication.config.loginRoute;
-
-    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
-      if (!isLoggedIn) {
-        return next.cancel(new Redirect(loginRoute));
-      }
-    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
-      return next.cancel(new Redirect( this.authentication.config.loginRedirect ));
-    }
-
-    return next();
-  }
-}
-
-@inject(Authentication, BaseConfig)
+@inject(Authentication, BaseConfig, EventAggregator)
 export class AuthService {
-  constructor(authentication, config) {
+  constructor(authentication, config, ea) {
     this.authentication = authentication;
     this.config         = config;
+    this.ea = ea
   }
 
   /**
@@ -1093,7 +1088,7 @@ export class AuthService {
     }
 
     if (this.config.clientId) {
-      data.client_id = this.config.clientId;
+      content.client_id = this.config.clientId;
     }
 
     return this.client.post(this.config.withBase(this.config.loginUrl), content, options)
@@ -1107,20 +1102,23 @@ export class AuthService {
   }
 
   /**
-   * logout locally and redirect to redirectUri (if set) or redirectUri of config
+   * logout locally and redirect to redirectUri (if set) or redirectUri of config. Sends logout request first if set in config
    *
    * @param {[String]}  [redirectUri]
    *
-   * @return {Promise<>}
+   * @return {Promise<>|Promise<response>}
    */
   logout(redirectUri) {
-    return new Promise(resolve => {
+    let localLogout = response => new Promise(resolve => {
       this.authentication.responseObject = null;
-
       this.authentication.redirect(redirectUri, this.config.logoutRedirect);
 
-      resolve();
+      resolve(response);
     });
+
+    return (this.config.logoutUrl
+      ? this.client.request(this.config.logoutMethod, this.config.withBase(this.config.logoutUrl)).then(localLogout)
+      : localLogout());
   }
 
   /**
@@ -1133,8 +1131,10 @@ export class AuthService {
    * @return {Promise<response>}
    */
   authenticate(name, redirectUri, userData = {}) {
+    this.ea.publish('aurelia-authentication:started', {name, redirectUri, userData});
     return this.authentication.authenticate(name, userData)
       .then(response => {
+        this.ea.publish('aurelia-authentication:completed', {name, redirectUri, userData});
         this.authentication.responseObject = response;
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
@@ -1158,6 +1158,28 @@ export class AuthService {
 
         return response;
       });
+  }
+}
+
+@inject(Authentication)
+export class AuthorizeStep {
+  constructor(authentication) {
+    this.authentication = authentication;
+  }
+
+  run(routingContext, next) {
+    const isLoggedIn = this.authentication.isAuthenticated();
+    const loginRoute = this.authentication.config.loginRoute;
+
+    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
+      if (!isLoggedIn) {
+        return next.cancel(new Redirect(loginRoute));
+      }
+    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
+      return next.cancel(new Redirect( this.authentication.config.loginRedirect ));
+    }
+
+    return next();
   }
 }
 
@@ -1274,6 +1296,11 @@ import './authFilter';
  * @param {{}|Function}                                         config
  */
 function configure(aurelia, config) {
+  // ie9 polyfill
+  if (!window.location.origin) {
+    window.location.origin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+  }
+
   aurelia.globalResources('./authFilter');
 
   const baseConfig = aurelia.container.get(BaseConfig);

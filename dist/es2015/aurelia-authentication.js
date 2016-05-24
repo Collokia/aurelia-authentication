@@ -1,4 +1,4 @@
-var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class10;
+var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _class5, _desc, _value, _class6, _dec11, _dec12, _class7, _desc2, _value2, _class8, _dec13, _class9, _dec14, _class10;
 
 function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
   var desc = {};
@@ -33,6 +33,7 @@ import extend from 'extend';
 import * as LogManager from 'aurelia-logging';
 import { parseQueryString, join, buildQueryString } from 'aurelia-path';
 import { inject } from 'aurelia-dependency-injection';
+import { EventAggregator } from 'aurelia-event-aggregator';
 import { deprecated } from 'aurelia-metadata';
 import { Redirect } from 'aurelia-router';
 import { HttpClient } from 'aurelia-fetch-client';
@@ -45,7 +46,7 @@ export let Popup = class Popup {
     this.url = '';
   }
 
-  open(url, windowName, options, redirectUri) {
+  open(url, windowName, options) {
     this.url = url;
     const optionsString = buildPopupWindowOptions(options || {});
 
@@ -177,6 +178,8 @@ export let BaseConfig = class BaseConfig {
     this.signupRedirect = '#/login';
     this.baseUrl = '';
     this.loginUrl = '/auth/login';
+    this.logoutUrl = null;
+    this.logoutMethod = 'get';
     this.signupUrl = '/auth/signup';
     this.profileUrl = '/auth/me';
     this.unlinkUrl = '/auth/unlink/';
@@ -198,122 +201,121 @@ export let BaseConfig = class BaseConfig {
     this.storage = 'localStorage';
     this.storageKey = 'aurelia_authentication';
     this.providers = {
+      facebook: {
+        name: 'facebook',
+        url: '/auth/facebook',
+        authorizationEndpoint: 'https://www.facebook.com/v2.5/dialog/oauth',
+        redirectUri: window.location.origin + '/',
+        requiredUrlParams: ['display', 'scope'],
+        scope: ['email'],
+        scopeDelimiter: ',',
+        display: 'popup',
+        oauthType: '2.0',
+        popupOptions: { width: 580, height: 400 }
+      },
       google: {
         name: 'google',
         url: '/auth/google',
         authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
+        redirectUri: window.location.origin,
+        requiredUrlParams: ['scope'],
+        optionalUrlParams: ['display', 'state'],
         scope: ['profile', 'email'],
         scopePrefix: 'openid',
         scopeDelimiter: ' ',
-        requiredUrlParams: ['scope'],
-        optionalUrlParams: ['display'],
         display: 'popup',
-        type: '2.0',
-        popupOptions: {
-          width: 452,
-          height: 633
-        }
-      },
-      facebook: {
-        name: 'facebook',
-        url: '/auth/facebook',
-        authorizationEndpoint: 'https://www.facebook.com/v2.3/dialog/oauth',
-        redirectUri: encodeURI(window.location.origin + '/' || window.location.protocol + '//' + window.location.host + '/'),
-        scope: ['email'],
-        scopeDelimiter: ',',
-        nonce: function () {
-          return Math.random();
-        },
-        requiredUrlParams: ['nonce', 'display', 'scope'],
-        display: 'popup',
-        type: '2.0',
-        popupOptions: {
-          width: 580,
-          height: 400
-        }
-      },
-      linkedin: {
-        name: 'linkedin',
-        url: '/auth/linkedin',
-        authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
-        requiredUrlParams: ['state'],
-        scope: ['r_emailaddress'],
-        scopeDelimiter: ' ',
-        state: 'STATE',
-        type: '2.0',
-        popupOptions: {
-          width: 527,
-          height: 582
+        oauthType: '2.0',
+        popupOptions: { width: 452, height: 633 },
+        state: function () {
+          let rand = Math.random().toString(36).substr(2);
+          return encodeURIComponent(rand);
         }
       },
       github: {
         name: 'github',
         url: '/auth/github',
         authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
+        redirectUri: window.location.origin,
         optionalUrlParams: ['scope'],
         scope: ['user:email'],
         scopeDelimiter: ' ',
-        type: '2.0',
-        popupOptions: {
-          width: 1020,
-          height: 618
-        }
-      },
-      yahoo: {
-        name: 'yahoo',
-        url: '/auth/yahoo',
-        authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
-        scope: [],
-        scopeDelimiter: ',',
-        type: '2.0',
-        popupOptions: {
-          width: 559,
-          height: 519
-        }
-      },
-      twitter: {
-        name: 'twitter',
-        url: '/auth/twitter',
-        authorizationEndpoint: 'https://api.twitter.com/oauth/authenticate',
-        type: '1.0',
-        popupOptions: {
-          width: 495,
-          height: 645
-        }
-      },
-      live: {
-        name: 'live',
-        url: '/auth/live',
-        authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
-        scope: ['wl.emails'],
-        scopeDelimiter: ' ',
-        requiredUrlParams: ['display', 'scope'],
-        display: 'popup',
-        type: '2.0',
-        popupOptions: {
-          width: 500,
-          height: 560
-        }
+        oauthType: '2.0',
+        popupOptions: { width: 1020, height: 618 }
       },
       instagram: {
         name: 'instagram',
         url: '/auth/instagram',
         authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-        redirectUri: encodeURI(window.location.origin || window.location.protocol + '//' + window.location.host),
+        redirectUri: window.location.origin,
         requiredUrlParams: ['scope'],
         scope: ['basic'],
         scopeDelimiter: '+',
+        oauthType: '2.0'
+      },
+      linkedin: {
+        name: 'linkedin',
+        url: '/auth/linkedin',
+        authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
+        redirectUri: window.location.origin,
+        requiredUrlParams: ['state'],
+        scope: ['r_emailaddress'],
+        scopeDelimiter: ' ',
+        state: 'STATE',
+        oauthType: '2.0',
+        popupOptions: { width: 527, height: 582 }
+      },
+      twitter: {
+        name: 'twitter',
+        url: '/auth/twitter',
+        authorizationEndpoint: 'https://api.twitter.com/oauth/authenticate',
+        redirectUri: window.location.origin,
+        oauthType: '1.0',
+        popupOptions: { width: 495, height: 645 }
+      },
+      twitch: {
+        name: 'twitch',
+        url: '/auth/twitch',
+        authorizationEndpoint: 'https://api.twitch.tv/kraken/oauth2/authorize',
+        redirectUri: window.location.origin,
+        requiredUrlParams: ['scope'],
+        scope: ['user_read'],
+        scopeDelimiter: ' ',
         display: 'popup',
-        type: '2.0',
-        popupOptions: {
-          width: 550,
-          height: 369
-        }
+        oauthType: '2.0',
+        popupOptions: { width: 500, height: 560 }
+      },
+      live: {
+        name: 'live',
+        url: '/auth/live',
+        authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
+        redirectUri: window.location.origin,
+        requiredUrlParams: ['display', 'scope'],
+        scope: ['wl.emails'],
+        scopeDelimiter: ' ',
+        display: 'popup',
+        oauthType: '2.0',
+        popupOptions: { width: 500, height: 560 }
+      },
+      yahoo: {
+        name: 'yahoo',
+        url: '/auth/yahoo',
+        authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
+        redirectUri: window.location.origin,
+        scope: [],
+        scopeDelimiter: ',',
+        oauthType: '2.0',
+        popupOptions: { width: 559, height: 519 }
+      },
+      bitbucket: {
+        name: 'bitbucket',
+        url: '/auth/bitbucket',
+        authorizationEndpoint: 'https://bitbucket.org/site/oauth2/authorize',
+        redirectUri: window.location.origin + '/',
+        requiredUrlParams: ['scope'],
+        scope: ['email'],
+        scopeDelimiter: ' ',
+        oauthType: '2.0',
+        popupOptions: { width: 1028, height: 529 }
       }
     };
     this._authToken = 'Bearer';
@@ -419,10 +421,11 @@ export let Storage = (_dec = inject(BaseConfig), _dec(_class2 = class Storage {
   }
 }) || _class2);
 
-export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 = class OAuth1 {
-  constructor(storage, popup, config) {
+export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec2(_class3 = class OAuth1 {
+  constructor(storage, popup, config, ea) {
     this.storage = storage;
     this.config = config;
+    this.ea = ea;
     this.popup = popup;
     this.defaults = {
       url: null,
@@ -438,14 +441,14 @@ export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 =
     const serverUrl = this.config.withBase(provider.url);
 
     if (this.config.platform !== 'mobile') {
-      this.popup = this.popup.open('', provider.name, provider.popupOptions, provider.redirectUri);
+      this.popup = this.popup.open('', provider.name, provider.popupOptions);
     }
 
     return this.config.client.post(serverUrl).then(response => {
       const url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
       if (this.config.platform === 'mobile') {
-        this.popup = this.popup.open(url, provider.name, provider.popupOptions, provider.redirectUri);
+        this.popup = this.popup.open(url, provider.name, provider.popupOptions);
       } else {
         this.popup.popupWindow.location = url;
       }
@@ -460,15 +463,16 @@ export let OAuth1 = (_dec2 = inject(Storage, Popup, BaseConfig), _dec2(_class3 =
     const data = extend(true, {}, userData, oauthData);
     const serverUrl = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken', {});
     return this.config.client.post(serverUrl, data, { credentials: credentials });
   }
 }) || _class3);
 
-export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 = class OAuth2 {
-  constructor(storage, popup, config) {
+export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec3(_class4 = class OAuth2 {
+  constructor(storage, popup, config, ea) {
     this.storage = storage;
     this.config = config;
+    this.ea = ea;
     this.popup = popup;
     this.defaults = {
       url: null,
@@ -491,6 +495,8 @@ export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 =
     const provider = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
+    this.ea.publish('aurelia-authentication:open', { options, userData });
+
     if (typeof provider.state === 'function') {
       this.storage.set(stateName, provider.state());
     } else if (typeof provider.state === 'string') {
@@ -498,7 +504,7 @@ export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 =
     }
 
     const url = provider.authorizationEndpoint + '?' + buildQueryString(this.buildQuery(provider));
-    const popup = this.popup.open(url, provider.name, provider.popupOptions, provider.redirectUri);
+    const popup = this.popup.open(url, provider.name, provider.popupOptions);
     const openPopup = this.config.platform === 'mobile' ? popup.eventListener(provider.redirectUri) : popup.pollPopup();
 
     return openPopup.then(oauthData => {
@@ -520,7 +526,7 @@ export let OAuth2 = (_dec3 = inject(Storage, Popup, BaseConfig), _dec3(_class4 =
 
     const serverUrl = this.config.withBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-
+    this.ea.publish('aurelia-authentication:exchangeForToken', {});
     return this.config.client.post(serverUrl, data, { credentials: credentials });
   }
 
@@ -736,9 +742,17 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
   }
 
   authenticate(name, userData = {}) {
-    const provider = this.config.providers[name].type === '1.0' ? this.oAuth1 : this.oAuth2;
+    let oauthType = this.config.providers[name].type;
 
-    return provider.open(this.config.providers[name], userData);
+    if (oauthType) {
+      LogManager.getLogger('authentication').warn('DEPRECATED: Setting provider.type is deprecated and replaced by provider.oauthType');
+    } else {
+      oauthType = this.config.providers[name].oauthType;
+    }
+
+    const providerLogin = oauthType === '1.0' ? this.oAuth1 : this.oAuth2;
+
+    return providerLogin.open(this.config.providers[name], userData);
   }
 
   redirect(redirectUrl, defaultRedirectUrl) {
@@ -762,31 +776,11 @@ export let Authentication = (_dec4 = inject(Storage, BaseConfig, OAuth1, OAuth2)
   }
 }, (_applyDecoratedDescriptor(_class6.prototype, 'getLoginRoute', [_dec5], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRoute'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginRedirect', [_dec6], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginRedirect'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getLoginUrl', [_dec7], Object.getOwnPropertyDescriptor(_class6.prototype, 'getLoginUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getSignupUrl', [_dec8], Object.getOwnPropertyDescriptor(_class6.prototype, 'getSignupUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getProfileUrl', [_dec9], Object.getOwnPropertyDescriptor(_class6.prototype, 'getProfileUrl'), _class6.prototype), _applyDecoratedDescriptor(_class6.prototype, 'getToken', [_dec10], Object.getOwnPropertyDescriptor(_class6.prototype, 'getToken'), _class6.prototype)), _class6)) || _class5);
 
-export let AuthorizeStep = (_dec11 = inject(Authentication), _dec11(_class7 = class AuthorizeStep {
-  constructor(authentication) {
-    this.authentication = authentication;
-  }
-
-  run(routingContext, next) {
-    const isLoggedIn = this.authentication.isAuthenticated();
-    const loginRoute = this.authentication.config.loginRoute;
-
-    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
-      if (!isLoggedIn) {
-        return next.cancel(new Redirect(loginRoute));
-      }
-    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
-      return next.cancel(new Redirect(this.authentication.config.loginRedirect));
-    }
-
-    return next();
-  }
-}) || _class7);
-
-export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = class AuthService {
-  constructor(authentication, config) {
+export let AuthService = (_dec11 = inject(Authentication, BaseConfig, EventAggregator), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec11(_class7 = (_class8 = class AuthService {
+  constructor(authentication, config, ea) {
     this.authentication = authentication;
     this.config = config;
+    this.ea = ea;
   }
 
   get client() {
@@ -911,7 +905,7 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = 
     }
 
     if (this.config.clientId) {
-      data.client_id = this.config.clientId;
+      content.client_id = this.config.clientId;
     }
 
     return this.client.post(this.config.withBase(this.config.loginUrl), content, options).then(response => {
@@ -924,17 +918,20 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = 
   }
 
   logout(redirectUri) {
-    return new Promise(resolve => {
+    let localLogout = response => new Promise(resolve => {
       this.authentication.responseObject = null;
-
       this.authentication.redirect(redirectUri, this.config.logoutRedirect);
 
-      resolve();
+      resolve(response);
     });
+
+    return this.config.logoutUrl ? this.client.request(this.config.logoutMethod, this.config.withBase(this.config.logoutUrl)).then(localLogout) : localLogout();
   }
 
   authenticate(name, redirectUri, userData = {}) {
+    this.ea.publish('aurelia-authentication:started', { name, redirectUri, userData });
     return this.authentication.authenticate(name, userData).then(response => {
+      this.ea.publish('aurelia-authentication:completed', { name, redirectUri, userData });
       this.authentication.responseObject = response;
 
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
@@ -951,7 +948,28 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig), _dec13 = 
       return response;
     });
   }
-}, (_applyDecoratedDescriptor(_class9.prototype, 'getCurrentToken', [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, 'getCurrentToken'), _class9.prototype)), _class9)) || _class8);
+}, (_applyDecoratedDescriptor(_class8.prototype, 'getCurrentToken', [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, 'getCurrentToken'), _class8.prototype)), _class8)) || _class7);
+
+export let AuthorizeStep = (_dec13 = inject(Authentication), _dec13(_class9 = class AuthorizeStep {
+  constructor(authentication) {
+    this.authentication = authentication;
+  }
+
+  run(routingContext, next) {
+    const isLoggedIn = this.authentication.isAuthenticated();
+    const loginRoute = this.authentication.config.loginRoute;
+
+    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
+      if (!isLoggedIn) {
+        return next.cancel(new Redirect(loginRoute));
+      }
+    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
+      return next.cancel(new Redirect(this.authentication.config.loginRedirect));
+    }
+
+    return next();
+  }
+}) || _class9);
 
 export let FetchConfig = (_dec14 = inject(HttpClient, Config, AuthService, BaseConfig), _dec14(_class10 = class FetchConfig {
   constructor(httpClient, clientConfig, authService, config) {
@@ -1039,6 +1057,10 @@ export let FetchConfig = (_dec14 = inject(HttpClient, Config, AuthService, BaseC
 import './authFilter';
 
 function configure(aurelia, config) {
+  if (!window.location.origin) {
+    window.location.origin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+  }
+
   aurelia.globalResources('./authFilter');
 
   const baseConfig = aurelia.container.get(BaseConfig);
