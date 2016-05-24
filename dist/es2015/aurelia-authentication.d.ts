@@ -1,17 +1,17 @@
 declare module 'aurelia-authentication' {
   export class Popup {
     constructor();
-    open(url: any, windowName: any, options: any): any;
-    eventListener(redirectUri: any): any;
+    open(url?: any, windowName?: any, options?: any): any;
+    eventListener(redirectUri?: any): any;
     pollPopup(): any;
   }
   export class BaseConfig {
     
     // prepends baseUrl
-    withBase(url: any): any;
+    withBase(url?: any): any;
     
     // merge current settings with incomming settings
-    configure(incomming: any): any;
+    configure(incomming?: any): any;
     
     /* ----------- default  config ----------- */
     // Used internally. The used Rest instance; set during configuration (see index.js)
@@ -148,30 +148,30 @@ declare module 'aurelia-authentication' {
     tokenPrefix: any;
   }
   export class AuthFilterValueConverter {
-    toView(routes: any, isAuthenticated: any): any;
+    toView(routes?: any, isAuthenticated?: any): any;
   }
   export class AuthError extends Error {
-    constructor(message: any, data: any);
+    constructor(message?: any, data?: any);
   }
   export class Storage {
-    constructor(config: any);
-    get(key: any): any;
-    set(key: any, value: any): any;
-    remove(key: any): any;
+    constructor(config?: any);
+    get(key?: any): any;
+    set(key?: any, value?: any): any;
+    remove(key?: any): any;
   }
   export class OAuth1 {
-    constructor(storage: any, popup: any, config: any, ea: any);
-    open(options: any, userData: any): any;
-    exchangeForToken(oauthData: any, userData: any, provider: any): any;
+    constructor(storage?: any, popup?: any, config?: any, ea?: any);
+    open(options?: any, userData?: any): any;
+    exchangeForToken(oauthData?: any, userData?: any, provider?: any): any;
   }
   export class OAuth2 {
-    constructor(storage: any, popup: any, config: any, ea: any);
-    open(options: any, userData: any): any;
-    exchangeForToken(oauthData: any, userData: any, provider: any): any;
-    buildQuery(provider: any): any;
+    constructor(storage?: any, popup?: any, config?: any, ea?: any);
+    open(options?: any, userData?: any): any;
+    exchangeForToken(oauthData?: any, userData?: any, provider?: any): any;
+    buildQuery(provider?: any): any;
   }
   export class Authentication {
-    constructor(storage: any, config: any, oAuth1: any, oAuth2: any);
+    constructor(storage?: any, config?: any, oAuth1?: any, oAuth2?: any);
     
     /* deprecated methods */
     getLoginRoute(): any;
@@ -196,11 +196,11 @@ declare module 'aurelia-authentication' {
     isAuthenticated(): any;
     
     /* get and set from response */
-    getDataFromResponse(response: any): any;
+    getDataFromResponse(response?: any): any;
     deleteData(): any;
-    getTokenFromResponse(response: any, tokenProp: any, tokenName: any, tokenRoot: any): any;
+    getTokenFromResponse(response?: any, tokenProp?: any, tokenName?: any, tokenRoot?: any): any;
     toUpdateTokenCallstack(): any;
-    resolveUpdateTokenCallstack(response: any): any;
+    resolveUpdateTokenCallstack(response?: any): any;
     
     /**
        * Authenticate with third-party
@@ -210,11 +210,11 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    authenticate(name: any, userData?: any): any;
-    redirect(redirectUrl: any, defaultRedirectUrl: any): any;
+    authenticate(name?: any, userData?: any): any;
+    redirect(redirectUrl?: any, defaultRedirectUrl?: any): any;
   }
   export class AuthService {
-    constructor(authentication: any, config: any, ea: any);
+    constructor(authentication?: any, config?: any, ea?: any);
     
     /**
        * Getter: The configured client for all aurelia-authentication requests
@@ -231,7 +231,7 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    getMe(criteria: any): any;
+    getMe(criteria?: any): any;
     
     /**
        * Send current user profile update to server
@@ -241,7 +241,7 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    updateMe(body: any, criteria: any): any;
+    updateMe(body?: any, criteria?: any): any;
     
     /**
        * Get accessToken from storage
@@ -304,7 +304,7 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    signup(displayName: any, email: any, password: any, options: any, redirectUri: any): any;
+    signup(displayName?: any, email?: any, password?: any, options?: any, redirectUri?: any): any;
     
     /**
        * login locally. Redirect depending on config
@@ -316,7 +316,7 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    login(email: any, password: any, options: any, redirectUri: any): any;
+    login(email?: any, password?: any, options?: any, redirectUri?: any): any;
     
     /**
        * logout locally and redirect to redirectUri (if set) or redirectUri of config. Sends logout request first if set in config
@@ -325,7 +325,7 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<>|Promise<response>}
        */
-    logout(redirectUri: any): any;
+    logout(redirectUri?: any): any;
     
     /**
        * Authenticate with third-party and redirect to redirectUri (if set) or redirectUri of config
@@ -336,7 +336,7 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    authenticate(name: any, redirectUri: any, userData?: any): any;
+    authenticate(name?: any, redirectUri?: any, userData?: any): any;
     
     /**
        * Unlink third-party
@@ -345,11 +345,11 @@ declare module 'aurelia-authentication' {
        *
        * @return {Promise<response>}
        */
-    unlink(name: any, redirectUri: any): any;
+    unlink(name?: any, redirectUri?: any): any;
   }
   export class AuthorizeStep {
-    constructor(authentication: any);
-    run(routingContext: any, next: any): any;
+    constructor(authentication?: any);
+    run(routingContext?: any, next?: any): any;
   }
   export class FetchConfig {
     
@@ -361,7 +361,7 @@ declare module 'aurelia-authentication' {
        * @param {Authentication} authService
        * @param {BaseConfig} config
        */
-    constructor(httpClient: any, clientConfig: any, authService: any, config: any);
+    constructor(httpClient?: any, clientConfig?: any, authService?: any, config?: any);
     
     /**
        * Interceptor for HttpClient
@@ -377,6 +377,6 @@ declare module 'aurelia-authentication' {
        *
        * @return {HttpClient[]}
        */
-    configure(client: any): any;
+    configure(client?: any): any;
   }
 }
