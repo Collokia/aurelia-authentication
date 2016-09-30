@@ -2,8 +2,8 @@ import * as LogManager from 'aurelia-logging';
 import {PLATFORM,DOM} from 'aurelia-pal';
 import {parseQueryString,join,buildQueryString} from 'aurelia-path';
 import {inject} from 'aurelia-dependency-injection';
-import {deprecated} from 'aurelia-metadata';
 import {EventAggregator} from 'aurelia-event-aggregator';
+import {deprecated} from 'aurelia-metadata';
 import {BindingSignaler} from 'aurelia-templating-resources';
 import {Redirect} from 'aurelia-router';
 import {HttpClient} from 'aurelia-fetch-client';
@@ -14,6 +14,9 @@ export declare class Popup {
   open(url?: any, windowName?: any, options?: any): any;
   eventListener(redirectUri?: any): any;
   pollPopup(): any;
+}
+export declare class AuthError extends Error {
+  constructor(message?: any, data?: any);
 }
 export declare class BaseConfig {
   
@@ -132,6 +135,9 @@ export declare class BaseConfig {
   // The the property from which to get the refresh token after a successful token refresh. Can also be dotted eg "refreshTokenProp.refreshTokenProp"
   refreshTokenProp: any;
   
+  // The proprety name used to send the existing token when refreshing `{ "refreshTokenSubmitProp": '...' }`
+  refreshTokenSubmitProp: any;
+  
   // If the property defined by `refreshTokenProp` is an object:
   // -----------------------------------------------------------
   // This is the property from which to get the token `{ "refreshTokenProp": { "refreshTokenName" : '...' } }`
@@ -207,12 +213,12 @@ export declare class AuthLock {
   open(options?: any, userData?: any): any;
 }
 export declare class OAuth1 {
-  constructor(storage?: any, popup?: any, config?: any);
+  constructor(storage?: any, popup?: any, config?: any, ea?: any);
   open(options?: any, userData?: any): any;
   exchangeForToken(oauthData?: any, userData?: any, provider?: any): any;
 }
 export declare class OAuth2 {
-  constructor(storage?: any, popup?: any, config?: any);
+  constructor(storage?: any, popup?: any, config?: any, ea?: any);
   open(options?: any, userData?: any): any;
   exchangeForToken(oauthData?: any, userData?: any, provider?: any): any;
   buildQuery(provider?: any): any;
@@ -541,6 +547,16 @@ export declare class FetchConfig {
  * @param {{}|Function}                                         config
  */
 export declare function configure(aurelia?: any, config?: any): any;
+export declare class AuthFilterValueConverter {
+  
+  /**
+     * route toView predictator on route.config.auth === isAuthenticated
+     * @param  {RouteConfig}  routes            the routes array to convert
+     * @param  {Boolean}      isAuthenticated   authentication status
+     * @return {Boolean}      show/hide element
+     */
+  toView(routes?: any, isAuthenticated?: any): any;
+}
 export declare class AuthenticatedFilterValueConverter {
   constructor(authService?: any);
   
@@ -560,14 +576,4 @@ export declare class AuthenticatedValueConverter {
      * @return {Boolean}  show/hide element
      */
   toView(): any;
-}
-export declare class AuthFilterValueConverter {
-  
-  /**
-     * route toView predictator on route.config.auth === isAuthenticated
-     * @param  {RouteConfig}  routes            the routes array to convert
-     * @param  {Boolean}      isAuthenticated   authentication status
-     * @return {Boolean}      show/hide element
-     */
-  toView(routes?: any, isAuthenticated?: any): any;
 }

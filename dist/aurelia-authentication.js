@@ -1,9 +1,15 @@
+import {AuthFilterValueConverter} from "./authFilterValueConverter"
+import {AuthenticatedValueConverter} from "./authenticatedValueConverter"
+import {AuthenticatedFilterValueConverter} from "./authenticatedFilterValueConverter"
 import extend from 'extend';
 import * as LogManager from 'aurelia-logging';
+import jwtDecode from 'jwt-decode';
+import {PLATFORM,DOM} from 'aurelia-pal';
 import {parseQueryString,join,buildQueryString} from 'aurelia-path';
 import {inject} from 'aurelia-dependency-injection';
 import {EventAggregator} from 'aurelia-event-aggregator';
 import {deprecated} from 'aurelia-metadata';
+import {BindingSignaler} from 'aurelia-templating-resources';
 import {Redirect} from 'aurelia-router';
 import {HttpClient} from 'aurelia-fetch-client';
 import {Config,Rest} from 'aurelia-api';
@@ -19,7 +25,7 @@ export class Popup {
     this.url = url;
     const optionsString = buildPopupWindowOptions(options || {});
 
-    this.popupWindow = window.open(url, windowName, optionsString);
+    this.popupWindow = PLATFORM.global.open(url, windowName, optionsString);
 
     if (this.popupWindow && this.popupWindow.focus) {
       this.popupWindow.focus();
@@ -35,7 +41,7 @@ export class Popup {
           return;
         }
 
-        const parser  = document.createElement('a');
+        const parser  = DOM.createElement('a');
         parser.href = event.url;
 
         if (parser.search || parser.hash) {
@@ -63,11 +69,11 @@ export class Popup {
 
   pollPopup() {
     return new Promise((resolve, reject) => {
-      this.polling = setInterval(() => {
+      this.polling = PLATFORM.global.setInterval(() => {
         let errorData;
 
         try {
-          if (this.popupWindow.location.host ===  document.location.host
+          if (this.popupWindow.location.host ===  PLATFORM.global.document.location.host
             && (this.popupWindow.location.search || this.popupWindow.location.hash)) {
             const qs = parseUrl(this.popupWindow.location);
 
@@ -78,20 +84,20 @@ export class Popup {
             }
 
             this.popupWindow.close();
-            clearInterval(this.polling);
+            PLATFORM.global.clearInterval(this.polling);
           }
         } catch (error) {
           errorData = error;
         }
 
         if (!this.popupWindow) {
-          clearInterval(this.polling);
+          PLATFORM.global.clearInterval(this.polling);
           reject({
             error: errorData,
             data: 'Provider Popup Blocked'
           });
         } else if (this.popupWindow.closed) {
-          clearInterval(this.polling);
+          PLATFORM.global.clearInterval(this.polling);
           reject({
             error: errorData,
             data: 'Problem poll popup'
@@ -109,8 +115,8 @@ const buildPopupWindowOptions = options => {
   const extended = extend({
     width: width,
     height: height,
-    left: window.screenX + ((window.outerWidth - width) / 2),
-    top: window.screenY + ((window.outerHeight - height) / 2.5)
+    left: PLATFORM.global.screenX + ((PLATFORM.global.outerWidth - width) / 2),
+    top: PLATFORM.global.screenY + ((PLATFORM.global.outerHeight - height) / 2.5)
   }, options);
 
   let parts = [];
@@ -120,7 +126,9 @@ const buildPopupWindowOptions = options => {
 };
 
 const parseUrl = url => {
-  return extend(true, {}, parseQueryString(url.search), parseQueryString(url.hash));
+  let hash = (url.hash.charAt(0) === '#') ? url.hash.substr(1) : url.hash;
+
+  return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
 
 export class AuthError extends Error{
@@ -137,12 +145,20 @@ export class AuthError extends Error{
     }
 }
 export class BaseConfig {
-  // prepends baseUrl
-  withBase(url) {
+  /**
+   * Prepends baseUrl to a given url
+   * @param  {String} url The relative url to append
+   * @return {String}     joined baseUrl and url
+   */
+  joinBase(url) {
     return join(this.baseUrl, url);
   }
 
-  // merge current settings with incomming settings
+  /**
+   * Merge current settings with incomming settings
+   * @param  {Object} incomming Settings object to be merged into the current configuration
+   * @return {Config}           this
+   */
   configure(incomming) {
     for (let key in incomming) {
       const value = incomming[key];
@@ -174,7 +190,7 @@ export class BaseConfig {
   // ===================
 
   // The SPA url to which the user is redirected after a successful login
-  loginRedirect = '#/customer';
+  loginRedirect = '#/';
   // The SPA url to which the user is redirected after a successful logout
   logoutRedirect = '#/';
   // The SPA route used when an unauthenticated user tries to access an SPA page that requires authentication
@@ -183,7 +199,10 @@ export class BaseConfig {
   loginOnSignup = true;
   // If loginOnSignup == false: The SPA url to which the user is redirected after a successful signup (else loginRedirect is used)
   signupRedirect = '#/login';
-
+  // The SPA url to load when the token expires
+  expiredRedirect = '#/';
+  // The SPA url to load when the authentication status changed in other tabs/windows (detected through storageEvents)
+  storageChangedRedirect = '#/';
 
   // API related options
   // ===================
@@ -201,10 +220,14 @@ export class BaseConfig {
   signupUrl = '/auth/signup';
   // The API endpoint used in profile requests (inc. `find/get` and `update`)
   profileUrl = '/auth/me';
+  // The method used to update the profile ('put' or 'patch')
+  profileMethod = 'put';
   // The API endpoint used with oAuth to unlink authentication
   unlinkUrl = '/auth/unlink/';
   // The HTTP method used for 'unlink' requests (Options: 'get' or 'post')
   unlinkMethod = 'get';
+  // The API endpoint to which refreshToken requests are sent. null = loginUrl
+  refreshTokenUrl = null;
 
 
   // Token Options
@@ -214,7 +237,7 @@ export class BaseConfig {
   authHeader = 'Authorization';
   // The token name used in the header of API requests that require authentication
   authTokenType = 'Bearer';
-  // The the property from which to get the access token after a successful login or signup
+  // The the property from which to get the access token after a successful login or signup. Can also be dotted eg "accessTokenProp.accessTokenName"
   accessTokenProp = 'access_token';
 
 
@@ -236,8 +259,10 @@ export class BaseConfig {
   autoUpdateToken = true;
   // Oauth Client Id
   clientId = false;
-  // The the property from which to get the refresh token after a successful token refresh
+  // The the property from which to get the refresh token after a successful token refresh. Can also be dotted eg "refreshTokenProp.refreshTokenProp"
   refreshTokenProp = 'refresh_token';
+  // The proprety name used to send the existing token when refreshing `{ "refreshTokenSubmitProp": '...' }`
+  refreshTokenSubmitProp = 'refresh_token';
 
   // If the property defined by `refreshTokenProp` is an object:
   // -----------------------------------------------------------
@@ -247,6 +272,12 @@ export class BaseConfig {
   // This allows the refresh token to be a further object deeper `{ "refreshTokenProp": { "refreshTokenRoot" : { "refreshTokenName" : '...' } } }`
   refreshTokenRoot = false;
 
+  // The property name from which to get the user authentication token. Can also be dotted idTokenProp.idTokenName
+  idTokenProp = 'id_token';
+  // This is the property from which to get the id token `{ "idTokenProp": { "idTokenName" : '...' } }`
+  idTokenName = 'token';
+  // This allows the id_token to be a further object deeper `{ "idTokenProp": { "idTokenRoot" : { "idTokenName" : '...' } } }`
+  idTokenRoot = false;
 
   // Miscellaneous Options
   // =====================
@@ -258,19 +289,31 @@ export class BaseConfig {
   withCredentials = true;
   // Controls how the popup is shown for different devices (Options: 'browser' or 'mobile')
   platform = 'browser';
-  // Determines the `window` property name upon which aurelia-authentication data is stored (Default: `window.localStorage`)
+  // Determines the `PLATFORM` property name upon which aurelia-authentication data is stored (Default: `PLATFORM.localStorage`)
   storage = 'localStorage';
   // The key used for storing the authentication response locally
   storageKey = 'aurelia_authentication';
+  // optional function to extract the expiration date. takes the server response as parameter
+  // eg (expires_in in sec): getExpirationDateFromResponse = serverResponse => new Date().getTime() + serverResponse.expires_in * 1000;
+  getExpirationDateFromResponse = null;
+  // optional function to extract the access token from the response. takes the server response as parameter
+  // eg: getAccessTokenFromResponse = serverResponse => serverResponse.data[0].access_token;
+  getAccessTokenFromResponse = null;
+  // optional function to extract the refresh token from the response. takes the server response as parameter
+  // eg: getRefreshTokenFromResponse = serverResponse => serverResponse.data[0].refresh_token;
+  getRefreshTokenFromResponse = null;
 
-  //OAuth provider specific related configuration
+  // List of value-converters to make global
+  globalValueConverters = ['authFilterValueConverter'];
+
+//OAuth provider specific related configuration
   // ============================================
   providers = {
     facebook: {
       name: 'facebook',
       url: '/auth/facebook',
       authorizationEndpoint: 'https://www.facebook.com/v2.5/dialog/oauth',
-      redirectUri: window.location.origin + '/',
+      redirectUri: PLATFORM.location.origin + '/',
       requiredUrlParams: ['display', 'scope'],
       scope: ['email'],
       scopeDelimiter: ',',
@@ -282,7 +325,7 @@ export class BaseConfig {
       name: 'google',
       url: '/auth/google',
       authorizationEndpoint: 'https://accounts.google.com/o/oauth2/auth',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       requiredUrlParams: ['scope'],
       optionalUrlParams: ['display', 'state'],
       scope: ['profile', 'email'],
@@ -291,16 +334,13 @@ export class BaseConfig {
       display: 'popup',
       oauthType: '2.0',
       popupOptions: { width: 452, height: 633 },
-      state: function() {
-        let rand = Math.random().toString(36).substr(2);
-        return encodeURIComponent(rand);
-      }
+      state: randomState
     },
     github: {
       name: 'github',
       url: '/auth/github',
       authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       optionalUrlParams: ['scope'],
       scope: ['user:email'],
       scopeDelimiter: ' ',
@@ -311,7 +351,7 @@ export class BaseConfig {
       name: 'instagram',
       url: '/auth/instagram',
       authorizationEndpoint: 'https://api.instagram.com/oauth/authorize',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       requiredUrlParams: ['scope'],
       scope: ['basic'],
       scopeDelimiter: '+',
@@ -321,7 +361,7 @@ export class BaseConfig {
       name: 'linkedin',
       url: '/auth/linkedin',
       authorizationEndpoint: 'https://www.linkedin.com/uas/oauth2/authorization',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       requiredUrlParams: ['state'],
       scope: ['r_emailaddress'],
       scopeDelimiter: ' ',
@@ -333,7 +373,7 @@ export class BaseConfig {
       name: 'twitter',
       url: '/auth/twitter',
       authorizationEndpoint: 'https://api.twitter.com/oauth/authenticate',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       oauthType: '1.0',
       popupOptions: { width: 495, height: 645 }
     },
@@ -341,7 +381,7 @@ export class BaseConfig {
       name: 'twitch',
       url: '/auth/twitch',
       authorizationEndpoint: 'https://api.twitch.tv/kraken/oauth2/authorize',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       requiredUrlParams: ['scope'],
       scope: ['user_read'],
       scopeDelimiter: ' ',
@@ -353,7 +393,7 @@ export class BaseConfig {
       name: 'live',
       url: '/auth/live',
       authorizationEndpoint: 'https://login.live.com/oauth20_authorize.srf',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       requiredUrlParams: ['display', 'scope'],
       scope: ['wl.emails'],
       scopeDelimiter: ' ',
@@ -365,7 +405,7 @@ export class BaseConfig {
       name: 'yahoo',
       url: '/auth/yahoo',
       authorizationEndpoint: 'https://api.login.yahoo.com/oauth2/request_auth',
-      redirectUri: window.location.origin,
+      redirectUri: PLATFORM.location.origin,
       scope: [],
       scopeDelimiter: ',',
       oauthType: '2.0',
@@ -375,28 +415,53 @@ export class BaseConfig {
       name: 'bitbucket',
       url: '/auth/bitbucket',
       authorizationEndpoint: 'https://bitbucket.org/site/oauth2/authorize',
-      redirectUri: window.location.origin + '/',
+      redirectUri: PLATFORM.location.origin + '/',
       requiredUrlParams: ['scope'],
       scope: ['email'],
       scopeDelimiter: ' ',
       oauthType: '2.0',
       popupOptions: { width: 1028, height: 529 }
+    },
+    auth0: {
+      name: 'auth0',
+      oauthType: 'auth0-lock',
+      clientId: 'your_client_id',
+      clientDomain: 'your_domain_url',
+      display: 'popup',
+      lockOptions: {
+        popup: true
+      },
+      responseType: 'token',
+      state: randomState
     }
   };
 
   /* deprecated defaults */
+  /**
+   * @deprecated
+   */
   _authToken = 'Bearer';
+  /**
+   * @deprecated
+   */
   _responseTokenProp = 'access_token';
+  /**
+   * @deprecated
+   */
   _tokenName = 'token';
+  /**
+   * @deprecated
+   */
   _tokenRoot = false;
+  /**
+   * @deprecated
+   */
   _tokenPrefix = 'aurelia';
 
   /* deprecated methods and parameteres */
-  get current() {
-    LogManager.getLogger('authentication').warn('BaseConfig.current() is deprecated. Use BaseConfig directly instead.');
-    return this;
-  }
-
+  /**
+   * @deprecated
+   */
   set authToken(authToken) {
     LogManager.getLogger('authentication').warn('BaseConfig.authToken is deprecated. Use BaseConfig.authTokenType instead.');
     this._authTokenType = authToken;
@@ -407,6 +472,9 @@ export class BaseConfig {
     return this._authTokenType;
   }
 
+  /**
+   * @deprecated
+   */
   set responseTokenProp(responseTokenProp) {
     LogManager.getLogger('authentication').warn('BaseConfig.responseTokenProp is deprecated. Use BaseConfig.accessTokenProp instead.');
     this._responseTokenProp = responseTokenProp;
@@ -417,6 +485,9 @@ export class BaseConfig {
     return this._responseTokenProp;
   }
 
+  /**
+   * @deprecated
+   */
   set tokenRoot(tokenRoot) {
     LogManager.getLogger('authentication').warn('BaseConfig.tokenRoot is deprecated. Use BaseConfig.accessTokenRoot instead.');
     this._tokenRoot = tokenRoot;
@@ -427,6 +498,9 @@ export class BaseConfig {
     return this._tokenRoot;
   }
 
+  /**
+   * @deprecated
+   */
   set tokenName(tokenName) {
     LogManager.getLogger('authentication').warn('BaseConfig.tokenName is deprecated. Use BaseConfig.accessTokenName instead.');
     this._tokenName = tokenName;
@@ -437,6 +511,9 @@ export class BaseConfig {
     return this._tokenName;
   }
 
+  /**
+   * @deprecated
+   */
   set tokenPrefix(tokenPrefix) {
     LogManager.getLogger('authentication').warn('BaseConfig.tokenPrefix is obsolete. Use BaseConfig.storageKey instead.');
     this._tokenPrefix = tokenPrefix;
@@ -445,6 +522,33 @@ export class BaseConfig {
   get tokenPrefix() {
     return this._tokenPrefix || 'aurelia';
   }
+
+  /**
+   * @deprecated
+   */
+  get current() {
+    LogManager.getLogger('authentication').warn('Getter BaseConfig.current is deprecated. Use BaseConfig directly instead.');
+    return this;
+  }
+  set current(_) {
+    throw new Error('Setter BaseConfig.current has been removed. Use BaseConfig directly instead.');
+  }
+
+  /**
+   * @deprecated
+   */
+  get _current() {
+    LogManager.getLogger('authentication').warn('Getter BaseConfig._current is deprecated. Use BaseConfig directly instead.');
+    return this;
+  }
+  set _current(_) {
+    throw new Error('Setter BaseConfig._current has been removed. Use BaseConfig directly instead.');
+  }
+}
+
+function randomState() {
+  let rand = Math.random().toString(36).substr(2);
+  return encodeURIComponent(rand);
 }
 
 @inject(BaseConfig)
@@ -454,21 +558,89 @@ export class Storage {
   }
 
   get(key) {
-    if (window[this.config.storage]) {
-      return window[this.config.storage].getItem(key);
-    }
+    return PLATFORM.global[this.config.storage].getItem(key);
   }
 
   set(key, value) {
-    if (window[this.config.storage]) {
-      return window[this.config.storage].setItem(key, value);
-    }
+    PLATFORM.global[this.config.storage].setItem(key, value);
   }
 
   remove(key) {
-    if (window[this.config.storage]) {
-      return window[this.config.storage].removeItem(key);
+    PLATFORM.global[this.config.storage].removeItem(key);
+  }
+}
+
+@inject(Storage, BaseConfig)
+export class AuthLock {
+  constructor(storage, config) {
+    this.storage      = storage;
+    this.config       = config;
+    this.defaults     = {
+      name: null,
+      state: null,
+      scope: null,
+      scopeDelimiter: null,
+      redirectUri: null,
+      clientId: null,
+      clientDomain: null,
+      display: 'popup',
+      lockOptions: {
+        popup: true
+      },
+      popupOptions: null,
+      responseType: 'token'
+    };
+  }
+
+  open(options, userData) {
+    // check pre-conditions
+    if (typeof PLATFORM.global.Auth0Lock !== 'function') {
+      throw new Error('Auth0Lock was not found in global scope. Please load it before using this provider.');
     }
+    const provider  = extend(true, {}, this.defaults, options);
+    const stateName = provider.name + '_state';
+
+    if (typeof provider.state === 'function') {
+      this.storage.set(stateName, provider.state());
+    } else if (typeof provider.state === 'string') {
+      this.storage.set(stateName, provider.state);
+    }
+
+    this.lock = this.lock || new PLATFORM.global.Auth0Lock(provider.clientId, provider.clientDomain);
+
+    const openPopup = new Promise((resolve, reject) => {
+      let opts = provider.lockOptions;
+      opts.popupOptions = provider.popupOptions;
+      opts.responseType = provider.responseType;
+      opts.callbackURL = provider.redirectUri;
+      opts.authParams = opts.authParams || {};
+      if (provider.scope) opts.authParams.scope = provider.scope;
+      if (provider.state) opts.authParams.state = this.storage.get(provider.name + '_state');
+
+      this.lock.show(provider.lockOptions, (err, profile, tokenOrCode) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({
+            //NOTE: this is an id token (JWT) and it shouldn't be named access_token
+            access_token: tokenOrCode
+          });
+        }
+      });
+    });
+
+    return openPopup
+      .then(lockResponse => {
+        if (provider.responseType === 'token' ||
+            provider.responseType === 'id_token%20token' ||
+            provider.responseType === 'token%20id_token'
+        ) {
+          return lockResponse;
+        }
+        //NOTE: 'code' responseType is not supported, this is an OpenID response (JWT token)
+        //      and code flow is not secure client-side
+        throw new Error('Only `token` responseType is supported');
+      });
   }
 }
 
@@ -477,7 +649,7 @@ export class OAuth1 {
   constructor(storage, popup, config, ea) {
     this.storage  = storage;
     this.config   = config;
-    this.ea   = ea;
+    this.eventAggregator   = ea;
     this.popup    = popup;
     this.defaults = {
       url: null,
@@ -490,7 +662,7 @@ export class OAuth1 {
 
   open(options, userData) {
     const provider  = extend(true, {}, this.defaults, options);
-    const serverUrl = this.config.withBase(provider.url);
+    const serverUrl = this.config.joinBase(provider.url);
 
     if (this.config.platform !== 'mobile') {
       this.popup = this.popup.open('', provider.name, provider.popupOptions);
@@ -516,9 +688,9 @@ export class OAuth1 {
 
   exchangeForToken(oauthData, userData, provider) {
     const data        = extend(true, {}, userData, oauthData);
-    const serverUrl   = this.config.withBase(provider.url);
+    const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-    this.ea.publish('aurelia-authentication:exchangeForToken',{});
+    this.eventAggregator.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 }
@@ -528,7 +700,7 @@ export class OAuth2 {
   constructor(storage, popup, config, ea) {
     this.storage      = storage;
     this.config       = config;
-    this.ea           = ea;
+    this.eventAggregator = ea;
     this.popup        = popup;
     this.defaults     = {
       url: null,
@@ -551,7 +723,7 @@ export class OAuth2 {
     const provider  = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
-    this.ea.publish('aurelia-authentication:open', {options, userData});
+    this.eventAggregator.publish('aurelia-authentication:open', {options, userData});
     
     if (typeof provider.state === 'function') {
       this.storage.set(stateName, provider.state());
@@ -569,8 +741,8 @@ export class OAuth2 {
     return openPopup
       .then(oauthData => {
         if (provider.responseType === 'token' ||
-            provider.responseType === 'id_token%20token' ||
-            provider.responseType === 'token%20id_token'
+            provider.responseType === 'id_token token' ||
+            provider.responseType === 'token id_token'
         ) {
           return oauthData;
         }
@@ -587,9 +759,9 @@ export class OAuth2 {
       redirectUri: provider.redirectUri
     }, oauthData);
 
-    const serverUrl   = this.config.withBase(provider.url);
+    const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-    this.ea.publish('aurelia-authentication:exchangeForToken',{});
+    this.eventAggregator.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 
@@ -621,6 +793,37 @@ export class OAuth2 {
     });
     return query;
   }
+
+  close(options) {
+    const provider  = extend(true, {}, this.defaults, options);
+    const url       = provider.logoutEndpoint + '?'
+                    + buildQueryString(this.buildLogoutQuery(provider));
+    const popup     = this.popup.open(url, provider.name, provider.popupOptions);
+    const openPopup = (this.config.platform === 'mobile')
+                    ? popup.eventListener(provider.postLogoutRedirectUri)
+                    : popup.pollPopup();
+
+    return openPopup
+      .then(response => {
+        return response;
+      });
+  }
+
+  buildLogoutQuery(provider) {
+    let query = {};
+    let authResponse = this.storage.get(this.config.storageKey);
+
+    if (provider.postLogoutRedirectUri) {
+      query.post_logout_redirect_uri = provider.postLogoutRedirectUri;
+    }
+    if (this.storage.get(provider.name + '_state')) {
+      query.state = this.storage.get(provider.name + '_state');
+    }
+    if (JSON.parse(authResponse).id_token) {
+      query.id_token_hint = JSON.parse(authResponse).id_token;
+    }
+    return query;
+  }
 }
 
 const camelCase = function(name) {
@@ -629,33 +832,22 @@ const camelCase = function(name) {
   });
 };
 
-@inject(Storage, BaseConfig, OAuth1, OAuth2)
+/// <reference path="../test/oAuth2.spec.js" />
+@inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock)
 export class Authentication {
-  constructor(storage, config, oAuth1, oAuth2) {
+  constructor(storage, config, oAuth1, oAuth2, auth0Lock) {
     this.storage              = storage;
     this.config               = config;
     this.oAuth1               = oAuth1;
     this.oAuth2               = oAuth2;
+    this.auth0Lock            = auth0Lock;
     this.updateTokenCallstack = [];
     this.accessToken          = null;
     this.refreshToken         = null;
+    this.idToken              = null;
     this.payload              = null;
     this.exp                  = null;
-    this.hasDataStored        = false;
-
-    // get token stored in previous format over
-    const oldStorageKey = config.tokenPrefix
-                        ? config.tokenPrefix + '_' + config.tokenName
-                        : this.tokenName;
-    const oldToken = storage.get(oldStorageKey);
-
-    if (oldToken) {
-      LogManager.getLogger('authentication').info('Found token with deprecated format in storage. Converting it to new format. No further action required.');
-      let fakeOldResponse = {};
-      fakeOldResponse[config.accessTokenProp] = oldToken;
-      this.responseObject = fakeOldResponse;
-      storage.remove(oldStorageKey);
-    }
+    this.responseAnalyzed     = false;
   }
 
 
@@ -671,19 +863,19 @@ export class Authentication {
     return this.config.loginRedirect;
   }
 
-  @deprecated({message: 'Use baseConfig.withBase(baseConfig.loginUrl) instead.'})
+  @deprecated({message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.'})
   getLoginUrl() {
-    return this.config.withBase(this.config.loginUrl);
+    return this.Config.joinBase(this.config.loginUrl);
   }
 
-  @deprecated({message: 'Use baseConfig.withBase(baseConfig.signupUrl) instead.'})
+  @deprecated({message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.'})
   getSignupUrl() {
-    return this.config.withBase(this.config.signupUrl);
+    return this.Config.joinBase(this.config.signupUrl);
   }
 
-  @deprecated({message: 'Use baseConfig.withBase(baseConfig.profileUrl) instead.'})
+  @deprecated({message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.'})
   getProfileUrl() {
-    return this.config.withBase(this.config.profileUrl);
+    return this.Config.joinBase(this.config.profileUrl);
   }
 
   @deprecated({message: 'Use .getAccessToken() instead.'})
@@ -691,41 +883,68 @@ export class Authentication {
     return this.getAccessToken();
   }
 
-  /* getters/setters for responseObject */
-
   get responseObject() {
-    return JSON.parse(this.storage.get(this.config.storageKey));
+    LogManager.getLogger('authentication').warn('Getter Authentication.responseObject is deprecated. Use Authentication.getResponseObject() instead.');
+    return this.getResponseObject();
   }
 
   set responseObject(response) {
+    LogManager.getLogger('authentication').warn('Setter Authentication.responseObject is deprecated. Use AuthServive.setResponseObject(response) instead.');
+    this.setResponseObject(response);
+  }
+
+  get hasDataStored() {
+    LogManager.getLogger('authentication').warn('Authentication.hasDataStored is deprecated. Use Authentication.responseAnalyzed instead.');
+    return this.responseAnalyzed;
+  }
+
+  /* get/set responseObject */
+
+  getResponseObject() {
+    return JSON.parse(this.storage.get(this.config.storageKey));
+  }
+
+  setResponseObject(response) {
     if (response) {
       this.getDataFromResponse(response);
-      return this.storage.set(this.config.storageKey, JSON.stringify(response));
+      this.storage.set(this.config.storageKey, JSON.stringify(response));
+      return;
     }
-    this.deleteData();
-    return this.storage.remove(this.config.storageKey);
+    this.accessToken      = null;
+    this.refreshToken     = null;
+    this.idToken          = null;
+    this.payload          = null;
+    this.exp              = null;
+    this.responseAnalyzed = false;
+
+    this.storage.remove(this.config.storageKey);
   }
 
 
   /* get data, update if needed first */
 
   getAccessToken() {
-    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
+    if (!this.responseAnalyzed) this.getDataFromResponse(this.getResponseObject());
     return this.accessToken;
   }
 
   getRefreshToken() {
-    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
+    if (!this.responseAnalyzed) this.getDataFromResponse(this.getResponseObject());
     return this.refreshToken;
   }
 
+  getIdToken() {
+    if (!this.responseAnalyzed) this.getDataFromResponse(this.getResponseObject());
+    return this.idToken;
+  }
+
   getPayload() {
-    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
+    if (!this.responseAnalyzed) this.getDataFromResponse(this.getResponseObject());
     return this.payload;
   }
 
   getExp() {
-    if (!this.hasDataStored) this.getDataFromResponse(this.responseObject);
+    if (!this.responseAnalyzed) this.getDataFromResponse(this.getResponseObject());
     return this.exp;
   }
 
@@ -754,62 +973,70 @@ export class Authentication {
   getDataFromResponse(response) {
     const config   = this.config;
 
-    this.accessToken = this.getTokenFromResponse(response, config.accessTokenProp, config.accessTokenName, config.accessTokenRoot);
+    // get access token either with from supplied parameters or with supplied function
+    this.accessToken = typeof this.config.getAccessTokenFromResponse === 'function'
+                     ? this.config.getAccessTokenFromResponse(response)
+                     : this.getTokenFromResponse(response, config.accessTokenProp, config.accessTokenName, config.accessTokenRoot);
+
 
     this.refreshToken = null;
     if (config.useRefreshToken) {
       try {
-        this.refreshToken = this.getTokenFromResponse(response, config.refreshTokenProp, config.refreshTokenName, config.refreshTokenRoot);
+        // get refresh token either with from supplied parameters or with supplied function
+        this.refreshToken = typeof this.config.getRefreshTokenFromResponse === 'function'
+                         ? this.config.getRefreshTokenFromResponse(response)
+                         : this.getTokenFromResponse(response, config.refreshTokenProp, config.refreshTokenName, config.refreshTokenRoot);
       } catch (e) {
         this.refreshToken = null;
+
+        LogManager.getLogger('authentication').warn('useRefreshToken is set, but could not extract a refresh token');
       }
     }
 
-    let payload = null;
-
-    if (this.accessToken && this.accessToken.split('.').length === 3) {
-      try {
-        const base64 = this.accessToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        payload = JSON.parse(decodeURIComponent(escape(window.atob(base64))));
-      } catch (e) {
-        payload = null;
-      }
+    this.idToken = null;
+    try {
+      this.idToken = this.getTokenFromResponse(response, config.idTokenProp, config.idTokenName, config.idTokenRoot);
+    } catch (e) {
+      this.idToken = null;
     }
 
-    this.payload = payload;
-    this.exp = payload ? parseInt(payload.exp, 10) : NaN;
+    this.payload = null;
+    try {
+      this.payload = this.accessToken ? jwtDecode(this.accessToken) : null;
+    } catch (_) {_;}
 
-    this.hasDataStored = true;
+    // get exp either with from jwt or with supplied function
+    this.exp = typeof this.config.getExpirationDateFromResponse === 'function'
+            ? this.config.getExpirationDateFromResponse(response)
+            : (this.payload && parseInt(this.payload.exp, 10)) ||  NaN;
+
+    this.responseAnalyzed = true;
 
     return {
       accessToken: this.accessToken,
       refreshToken: this.refreshToken,
+      idToken: this.idToken,
       payload: this.payload,
       exp: this.exp
     };
   }
 
-  deleteData() {
-    this.accessToken = null;
-    this.refreshToken = null;
-    this.payload = null;
-    this.exp = null;
-
-    this.hasDataStored = false;
-  }
-
   getTokenFromResponse(response, tokenProp, tokenName, tokenRoot) {
     if (!response) return undefined;
 
-    const responseTokenProp = response[tokenProp];
+    const responseTokenProp = tokenProp.split('.').reduce((o, x) => o[x], response);
 
     if (typeof responseTokenProp === 'string') {
       return responseTokenProp;
     }
 
     if (typeof responseTokenProp === 'object') {
-      const tokenRootData = tokenRoot && tokenRoot.split('.').reduce(function(o, x) { return o[x]; }, responseTokenProp);
-      return tokenRootData ? tokenRootData[tokenName] : responseTokenProp[tokenName];
+      const tokenRootData = tokenRoot && tokenRoot.split('.').reduce((o, x) => o[x], responseTokenProp);
+      const token = tokenRootData ? tokenRootData[tokenName] : responseTokenProp[tokenName];
+
+    if (!token) throw new AuthError('Token not found in response', {response});
+
+      return token;
     }
 
     const token = response[tokenName] === undefined ? null : response[tokenName];
@@ -847,12 +1074,25 @@ export class Authentication {
       oauthType = this.config.providers[name].oauthType;
     }
 
-    const providerLogin = oauthType === '1.0' ? this.oAuth1 : this.oAuth2;
+    let providerLogin;
+    if (oauthType === 'auth0-lock') {
+      providerLogin = this.auth0Lock;
+    } else {
+      providerLogin = (oauthType === '1.0' ? this.oAuth1 : this.oAuth2);
+    }
 
     return providerLogin.open(this.config.providers[name], userData);
   }
 
-  redirect(redirectUrl, defaultRedirectUrl) {
+  logout(name) {
+    let rtnValue = Promise.resolve('Not Applicable');
+    if (this.config.providers[name].oauthType !== '2.0' || !this.config.providers[name].logoutEndpoint) {
+      return rtnValue;
+    }
+    return this.oAuth2.close(this.config.providers[name]);
+  }
+
+  redirect(redirectUrl, defaultRedirectUrl, query) {
     // stupid rule to keep it BC
     if (redirectUrl === true) {
       LogManager.getLogger('authentication').warn('DEPRECATED: Setting redirectUrl === true to actually *not redirect* is deprecated. Set redirectUrl === 0 instead.');
@@ -867,20 +1107,107 @@ export class Authentication {
       return;
     }
     if (typeof redirectUrl === 'string') {
-      window.location.href = window.encodeURI(redirectUrl);
+      PLATFORM.location.href = encodeURI(redirectUrl + (query ? `?${buildQueryString(query)}` : ''));
     } else if (defaultRedirectUrl) {
-      window.location.href = defaultRedirectUrl;
+      PLATFORM.location.href = defaultRedirectUrl + (query ? `?${buildQueryString(query)}` : '');
     }
   }
 }
 
-@inject(Authentication, BaseConfig, EventAggregator)
+@inject(Authentication, BaseConfig, BindingSignaler, EventAggregator)
 export class AuthService {
-  constructor(authentication, config, ea) {
-    this.authentication = authentication;
-    this.config         = config;
-    this.ea = ea
+  /**
+   * The Authentication instance that handles the token
+   *
+   * @param  {Authentication}
+   */
+  authentication;
+
+  /**
+   * The Config instance that contains the current configuration setting
+   *
+   * @param  {Config}
+   */
+  config;
+
+  /**
+   * The current login status
+   *
+   * @param  {Boolean}
+   */
+  authenticated  = false;
+
+  /**
+   * The currently set timeoutID
+   *
+   * @param  {Number}
+   */
+  timeoutID = 0;
+
+  /**
+   *  Create an AuthService instance
+   *
+   * @param  {Authentication}  authentication  The Authentication instance to be used
+   * @param  {Config}          config          The Config instance to be used
+   * @param  {BindingSignaler} bindingSignaler The BindingSignaler instance to be used
+   * @param  {EventAggregator} eventAggregator The EventAggregator instance to be used
+   */
+  constructor(authentication, config, bindingSignaler, eventAggregator) {
+    this.authentication  = authentication;
+    this.config          = config;
+    this.bindingSignaler = bindingSignaler;
+    this.eventAggregator = eventAggregator;
+
+    // get token stored in previous format over
+    const oldStorageKey = config.tokenPrefix
+                        ? `${config.tokenPrefix}_${config.tokenName}`
+                        : config.tokenName;
+    const oldToken = authentication.storage.get(oldStorageKey);
+
+    if (oldToken) {
+      LogManager.getLogger('authentication').info('Found token with deprecated format in storage. Converting it to new format. No further action required.');
+      let fakeOldResponse = {};
+      fakeOldResponse[config.accessTokenProp] = oldToken;
+      this.setResponseObject(fakeOldResponse);
+      authentication.storage.remove(oldStorageKey);
+    }
+
+    // initialize status by resetting if existing stored responseObject
+    this.setResponseObject(this.authentication.getResponseObject());
+
+    // listen to storage events in case the user logs in or out in another tab/window
+    PLATFORM.addEventListener('storage', this.storageEventHandler);
   }
+
+  /**
+   * The handler used for storage events. Detects and handles authentication changes in other tabs/windows
+   *
+   * @param {StorageEvent}
+   */
+  storageEventHandler = event => {
+    if (event.key !== this.config.storageKey) {
+      return;
+    }
+
+    LogManager.getLogger('authentication').info('Stored token changed event');
+
+    // IE runs the event handler before updating the storage value. Update it now.
+    // An unset storage key in IE is an empty string, where-as chrome is null
+    if (event.newValue) {
+      this.authentication.storage.set(this.config.storageKey, event.newValue);
+    } else {
+      this.authentication.storage.remove(this.config.storageKey);
+    }
+
+    let wasAuthenticated = this.authenticated;
+    this.authentication.responseAnalyzed = false;
+    this.updateAuthenticated();
+
+    if (this.config.storageChangedRedirect && wasAuthenticated !== this.authenticated) {
+      PLATFORM.location.assign(this.config.storageChangedRedirect);
+    }
+  }
+
 
   /**
    * Getter: The configured client for all aurelia-authentication requests
@@ -891,44 +1218,120 @@ export class AuthService {
     return this.config.client;
   }
 
+  /**
+   * Getter: The authentication class instance
+   *
+   * @return {boolean}
+   * @deprecated
+   */
   get auth() {
     LogManager.getLogger('authentication').warn('AuthService.auth is deprecated. Use .authentication instead.');
     return this.authentication;
   }
 
   /**
+   * Sets the login timeout
+   *
+   * @param  {Number} ttl  Timeout time in ms
+   */
+  setTimeout(ttl) {
+    this.clearTimeout();
+
+    this.timeoutID = PLATFORM.global.setTimeout(() => {
+      if (this.config.autoUpdateToken
+        && this.authentication.getAccessToken()
+        && this.authentication.getRefreshToken()) {
+        this.updateToken();
+
+        return;
+      }
+
+      this.setResponseObject(null);
+
+      if (this.config.expiredRedirect) {
+        PLATFORM.location.assign(this.config.expiredRedirect);
+      }
+    }, ttl);
+  }
+
+  /**
+   * Clears the login timeout
+   */
+  clearTimeout() {
+    if (this.timeoutID) {
+      PLATFORM.global.clearTimeout(this.timeoutID);
+    }
+    this.timeoutID = 0;
+  }
+
+  /**
+   * Stores and analyses the servers responseObject. Sets login status and timeout
+   *
+   * @param {Object} response The servers response as GOJO
+   */
+  setResponseObject(response) {
+    this.authentication.setResponseObject(response);
+
+    this.updateAuthenticated();
+  }
+
+  /**
+   * Update authenticated. Sets login status and timeout
+   */
+  updateAuthenticated() {
+    this.clearTimeout();
+
+    let wasAuthenticated = this.authenticated;
+    this.authenticated = this.authentication.isAuthenticated();
+
+    if (this.authenticated && !Number.isNaN(this.authentication.exp)) {
+      this.setTimeout(this.getTtl() * 1000);
+    }
+
+    if (wasAuthenticated !== this.authenticated) {
+      this.bindingSignaler.signal('authentication-change');
+      this.eventAggregator.publish('authentication-change', this.authenticated);
+
+      LogManager.getLogger('authentication').info(`Authorization changed to: ${this.authenticated}`);
+    }
+  }
+
+  /**
    * Get current user profile from server
    *
-   * @param {[{}|number|string]}  [criteria object or a Number|String converted to {id:criteria}]
+   * @param {[{}|number|string]}  [criteriaOrId object or a Number|String converted to {id: criteriaOrId}]
    *
    * @return {Promise<response>}
    */
-  getMe(criteria) {
-    if (typeof criteria === 'string' || typeof criteria === 'number') {
-      criteria = {id: criteria};
+  getMe(criteriaOrId) {
+    if (typeof criteriaOrId === 'string' || typeof criteriaOrId === 'number') {
+      criteriaOrId = {id: criteriaOrId};
     }
-    return this.client.find(this.config.withBase(this.config.profileUrl), criteria);
+    return this.client.find(this.config.joinBase(this.config.profileUrl), criteriaOrId);
   }
 
   /**
    * Send current user profile update to server
-   *
-   * @param {any}                 request body with data.
-   * @param {[{}|Number|String]}  [criteria object or a Number|String converted to {id:criteria}]
+
+   * @param {any}                 Request body with data.
+   * @param {[{}|Number|String]}  [criteriaOrId object or a Number|String converted to {id: criteriaOrId}]
    *
    * @return {Promise<response>}
    */
-  updateMe(body, criteria) {
-    if (typeof criteria === 'string' || typeof criteria === 'number') {
-      criteria = { id: criteria };
+  updateMe(body, criteriaOrId) {
+    if (typeof criteriaOrId === 'string' || typeof criteriaOrId === 'number') {
+      criteriaOrId = { id: criteriaOrId };
     }
-    return this.client.update(this.config.withBase(this.config.profileUrl), criteria, body);
+    if (this.config.profileMethod === 'put') {
+      return this.client.update(this.config.joinBase(this.config.profileUrl), criteriaOrId, body);
+    }
+    return this.client.patch(this.config.joinBase(this.config.profileUrl), criteriaOrId, body);
   }
 
   /**
    * Get accessToken from storage
    *
-   * @returns {String} current accessToken
+   * @returns {String} Current accessToken
    */
   getAccessToken() {
     return this.authentication.getAccessToken();
@@ -942,18 +1345,29 @@ export class AuthService {
   /**
    * Get refreshToken from storage
    *
-   * @returns {String} current refreshToken
+   * @returns {String} Current refreshToken
    */
   getRefreshToken() {
     return this.authentication.getRefreshToken();
   }
 
+  /**
+   * Get idToken from storage
+   *
+   * @returns {String} Current idToken
+   */
+  getIdToken() {
+    return this.authentication.getIdToken();
+  }
+
  /**
-  * Gets authentication status
+  * Gets authentication status from storage
   *
-  * @returns {Boolean} true: for Non-JWT and unexpired JWT, false: else
+  * @returns {Boolean} For Non-JWT and unexpired JWT: true, else: false
   */
   isAuthenticated() {
+    this.authentication.responseAnalyzed = false;
+
     let authenticated = this.authentication.isAuthenticated();
 
     // auto-update token?
@@ -969,9 +1383,18 @@ export class AuthService {
   }
 
   /**
+   * Gets exp in milliseconds
+   *
+   * @returns {Number} Exp for JWT tokens, NaN for all other tokens
+   */
+  getExp() {
+    return this.authentication.getExp();
+  }
+
+  /**
    * Gets ttl in seconds
    *
-   * @returns {Number} ttl for JWT tokens, NaN for all other tokens
+   * @returns {Number} Ttl for JWT tokens, NaN for all other tokens
    */
   getTtl() {
     return this.authentication.getTtl();
@@ -980,7 +1403,7 @@ export class AuthService {
  /**
   * Gets exp from token payload and compares to current time
   *
-  * @returns {Boolean} returns (ttl > 0)? for JWT, undefined other tokens
+  * @returns {Boolean} Returns (ttl > 0)? for JWT, undefined other tokens
   */
   isTokenExpired() {
     return this.authentication.isTokenExpired();
@@ -989,7 +1412,7 @@ export class AuthService {
   /**
   * Get payload from tokens
   *
-  * @returns {null | String} null: Non-JWT payload, String: JWT token payload
+  * @returns {Object} Payload for JWT, else null
   */
   getTokenPayload() {
     return this.authentication.getPayload();
@@ -998,7 +1421,7 @@ export class AuthService {
   /**
    * Request new accesss token
    *
-   * @returns {Promise<Response>} requests new token. can be called multiple times
+   * @returns {Promise<Response>} Requests new token. can be called multiple times
    */
   updateToken() {
     if (!this.authentication.getRefreshToken()) {
@@ -1006,19 +1429,22 @@ export class AuthService {
     }
 
     if (this.authentication.updateTokenCallstack.length === 0) {
-      const content = {
+      let content = {
         grant_type: 'refresh_token',
-        refresh_token: this.authentication.getRefreshToken(),
         client_id: this.config.clientId ? this.config.clientId : undefined
       };
 
-      this.client.post(this.config.withBase(this.config.loginUrl), content)
+      content[this.config.refreshTokenSubmitProp] = this.authentication.getRefreshToken();
+
+      this.client.post(this.config.joinBase(this.config.refreshTokenUrl
+                                            ? this.config.refreshTokenUrl
+                                            : this.config.loginUrl), content)
         .then(response => {
-          this.authentication.responseObject = response;
-          this.authentication.resolveUpdateTokenCallstack(this.authentication.isAuthenticated());
+          this.setResponseObject(response);
+          this.authentication.resolveUpdateTokenCallstack(this.isAuthenticated());
         })
         .catch(err => {
-          this.authentication.responseObject = null;
+          this.setResponseObject(null);
           this.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
         });
     }
@@ -1027,34 +1453,34 @@ export class AuthService {
   }
 
   /**
-   * Signup locally
+   * Signup locally. Login and redirect depending on config
    *
-   * @param {String|{}}   displayName | object with signup data.
-   * @param {[String]|{}} [email | options for post request]
-   * @param {[String]}    [password | redirectUri overwrite]
-   * @param {[{}]}        [options]
-   * @param {[String]}    [redirectUri overwrite]
+   * @param {String|{}}   displayNameOrCredentials displayName | object with signup data.
+   * @param {[String]|{}} emailOrOptions           [email | options for post request]
+   * @param {[String]}    passwordOrRedirectUri    [password | optional redirectUri overwrite]
+   * @param {[{}]}        options                  [options]
+   * @param {[String]}    redirectUri              [optional redirectUri overwrite]
    *
-   * @return {Promise<response>}
+   * @return {Promise<Object>|Promise<Error>}     Server response as Object
    */
-  signup(displayName, email, password, options, redirectUri) {
+  signup(displayNameOrCredentials, emailOrOptions, passwordOrRedirectUri, options, redirectUri) {
     let content;
 
     if (typeof arguments[0] === 'object') {
-      content = arguments[0];
-      options = arguments[1];
+      content     = arguments[0];
+      options     = arguments[1];
       redirectUri = arguments[2];
     } else {
       content = {
-        'displayName': displayName,
-        'email': email,
-        'password': password
+        'displayName': displayNameOrCredentials,
+        'email': emailOrOptions,
+        'password': passwordOrRedirectUri
       };
     }
-    return this.client.post(this.config.withBase(this.config.signupUrl), content, options)
+    return this.client.post(this.config.joinBase(this.config.signupUrl), content, options)
       .then(response => {
         if (this.config.loginOnSignup) {
-          this.authentication.responseObject = response;
+          this.setResponseObject(response);
         }
         this.authentication.redirect(redirectUri, this.config.signupRedirect);
 
@@ -1065,35 +1491,35 @@ export class AuthService {
   /**
    * login locally. Redirect depending on config
    *
-   * @param {[String]|{}} email | object with signup data.
-   * @param {[String]}    [password | options for post request]
-   * @param {[{}]}        [options | redirectUri overwrite]]
-   * @param {[String]}    [redirectUri overwrite]
+   * @param {[String]|{}} emailOrCredentials      email | object with signup data.
+   * @param {[String]}    [passwordOrOptions]     [password | options for post request]
+   * @param {[{}]}        [optionsOrRedirectUri]  [options | redirectUri overwrite]]
+   * @param {[String]}    [redirectUri]           [optional redirectUri overwrite]
    *
-   * @return {Promise<response>}
+   * @return {Promise<Object>|Promise<Error>}    Server response as Object
    */
-  login(email, password, options, redirectUri) {
+  login(emailOrCredentials, passwordOrOptions, optionsOrRedirectUri, redirectUri) {
     let content;
 
     if (typeof arguments[0] === 'object') {
-      content = arguments[0];
-      options = arguments[1];
-      redirectUri = arguments[2];
+      content              = arguments[0];
+      optionsOrRedirectUri = arguments[1];
+      redirectUri          = arguments[2];
     } else {
       content = {
-        'email': email,
-        'password': password
+        'email': emailOrCredentials,
+        'password': passwordOrOptions
       };
-      options = options;
+      optionsOrRedirectUri = optionsOrRedirectUri;
     }
 
     if (this.config.clientId) {
       content.client_id = this.config.clientId;
     }
 
-    return this.client.post(this.config.withBase(this.config.loginUrl), content, options)
+    return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri)
       .then(response => {
-        this.authentication.responseObject = response;
+        this.setResponseObject(response);
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
@@ -1102,40 +1528,59 @@ export class AuthService {
   }
 
   /**
-   * logout locally and redirect to redirectUri (if set) or redirectUri of config. Sends logout request first if set in config
+   * logout locally and redirect to redirectUri (if set) or redirectUri of config. Sends logout request first, if set in config
    *
-   * @param {[String]}  [redirectUri]
+   * @param {[String]}    [redirectUri]                     [optional redirectUri overwrite]
+   * @param {[String]}    [query]                           [optional query]
+   * @param {[String]}    [name]                            [optional name Name of the provider]
    *
-   * @return {Promise<>|Promise<response>}
+   * @return {Promise<>|Promise<Object>|Promise<Error>}     Server response as Object
    */
-  logout(redirectUri) {
+  logout(redirectUri, query, name) {
     let localLogout = response => new Promise(resolve => {
-      this.authentication.responseObject = null;
-      this.authentication.redirect(redirectUri, this.config.logoutRedirect);
+      this.setResponseObject(null);
 
+      this.authentication.redirect(redirectUri, this.config.logoutRedirect, query);
+
+      if (typeof this.onLogout === 'function') {
+        this.onLogout(response);
+      }
       resolve(response);
     });
 
-    return (this.config.logoutUrl
-      ? this.client.request(this.config.logoutMethod, this.config.withBase(this.config.logoutUrl)).then(localLogout)
-      : localLogout());
+    if (name) {
+      if (this.config.providers[name].logoutEndpoint) {
+        return this.authentication.logout(name)
+          .then(logoutResponse => {
+            let stateValue = this.authentication.storage.get(name + '_state');
+            if (logoutResponse.state !== stateValue) {
+              return Promise.reject('OAuth2 response state value differs');
+            }
+            return localLogout(logoutResponse);
+          });
+      }
+    } else {
+      return (this.config.logoutUrl
+        ? this.client.request(this.config.logoutMethod, this.config.joinBase(this.config.logoutUrl)).then(localLogout)
+        : localLogout());
+    }
   }
 
   /**
    * Authenticate with third-party and redirect to redirectUri (if set) or redirectUri of config
    *
-   * @param {String}    name of the provider
-   * @param {[String]}  [redirectUri]
-   * @param {[{}]}      [userData]
+   * @param {String}    name          Name of the provider
+   * @param {[String]}  [redirectUri] [optional redirectUri overwrite]
+   * @param {[{}]}      [userData]    [optional userData for the local authentication server]
    *
-   * @return {Promise<response>}
+   * @return {Promise<Object>|Promise<Error>}     Server response as Object
    */
   authenticate(name, redirectUri, userData = {}) {
-    this.ea.publish('aurelia-authentication:started', {name, redirectUri, userData});
+    this.eventAggregator.publish('aurelia-authentication:started', {name, redirectUri, userData});
     return this.authentication.authenticate(name, userData)
       .then(response => {
-        this.ea.publish('aurelia-authentication:completed', {name, redirectUri, userData});
-        this.authentication.responseObject = response;
+        this.setResponseObject(response);
+        this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
@@ -1146,12 +1591,12 @@ export class AuthService {
   /**
    * Unlink third-party
    *
-   * @param {String}  name of the provider
+   * @param {String}      name                  Name of the provider
    *
-   * @return {Promise<response>}
+   * @return {Promise<Object>|Promise<Error>}  Server response as Object
    */
   unlink(name, redirectUri) {
-    const unlinkUrl = this.config.withBase(this.config.unlinkUrl) + name;
+    const unlinkUrl = this.config.joinBase(this.config.unlinkUrl) + name;
     return this.client.request(this.config.unlinkMethod, unlinkUrl)
       .then(response => {
         this.authentication.redirect(redirectUri);
@@ -1161,22 +1606,46 @@ export class AuthService {
   }
 }
 
-@inject(Authentication)
-export class AuthorizeStep {
-  constructor(authentication) {
-    this.authentication = authentication;
+@inject(AuthService)
+export class AuthenticateStep {
+  constructor(authService) {
+    this.authService = authService;
   }
 
   run(routingContext, next) {
-    const isLoggedIn = this.authentication.isAuthenticated();
-    const loginRoute = this.authentication.config.loginRoute;
+    const isLoggedIn = this.authService.authenticated;
+    const loginRoute = this.authService.config.loginRoute;
 
-    if (routingContext.getAllInstructions().some(i => i.config.auth)) {
+    if (routingContext.getAllInstructions().some(route => route.config.auth === true)) {
       if (!isLoggedIn) {
         return next.cancel(new Redirect(loginRoute));
       }
-    } else if (isLoggedIn && routingContext.getAllInstructions().some(i => i.fragment === loginRoute)) {
-      return next.cancel(new Redirect( this.authentication.config.loginRedirect ));
+    } else if (isLoggedIn && routingContext.getAllInstructions().some(route => route.fragment === loginRoute)) {
+      return next.cancel(new Redirect( this.authService.config.loginRedirect ));
+    }
+
+    return next();
+  }
+}
+
+@inject(AuthService)
+export class AuthorizeStep {
+  constructor(authService) {
+    LogManager.getLogger('authentication').warn('AuthorizeStep is deprecated. Use AuthenticateStep instead.');
+
+    this.authService = authService;
+  }
+
+  run(routingContext, next) {
+    const isLoggedIn = this.authService.isAuthenticated();
+    const loginRoute = this.authService.config.loginRoute;
+
+    if (routingContext.getAllInstructions().some(route => route.config.auth)) {
+      if (!isLoggedIn) {
+        return next.cancel(new Redirect(loginRoute));
+      }
+    } else if (isLoggedIn && routingContext.getAllInstructions().some(route => route.fragment === loginRoute)) {
+      return next.cancel(new Redirect( this.authService.config.loginRedirect ));
     }
 
     return next();
@@ -1236,7 +1705,7 @@ export class FetchConfig {
             return resolve(response);
           }
 
-          this.authService.updateToken().then(() => {
+          return this.authService.updateToken().then(() => {
             let token = this.authService.getAccessToken();
 
             if (this.config.authTokenType) {
@@ -1255,7 +1724,7 @@ export class FetchConfig {
   /**
    * Configure client(s) with authorization interceptor
    *
-   * @param {HttpClient|Rest|string[]} (array of) httpClient, rest client or api endpoint names
+   * @param {HttpClient|Rest|string[]} client HttpClient, rest client or api endpoint name, or an array thereof
    *
    * @return {HttpClient[]}
    */
@@ -1287,7 +1756,10 @@ export class FetchConfig {
   }
 }
 
-import './authFilter';
+// added for bundling
+// eslint-disable-line no-unused-vars
+// eslint-disable-line no-unused-vars
+// eslint-disable-line no-unused-vars
 
 /**
  * Configure the plugin.
@@ -1295,13 +1767,11 @@ import './authFilter';
  * @param {{globalResources: Function, container: {Container}}} aurelia
  * @param {{}|Function}                                         config
  */
-function configure(aurelia, config) {
+export function configure(aurelia, config) {
   // ie9 polyfill
-  if (!window.location.origin) {
-    window.location.origin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? ':' + window.location.port : '');
+  if (!PLATFORM.location.origin) {
+    PLATFORM.location.origin = PLATFORM.location.protocol + '//' + PLATFORM.location.hostname + (PLATFORM.location.port ? ':' + PLATFORM.location.port : '');
   }
-
-  aurelia.globalResources('./authFilter');
 
   const baseConfig = aurelia.container.get(BaseConfig);
 
@@ -1310,7 +1780,12 @@ function configure(aurelia, config) {
   } else if (typeof config === 'object') {
     baseConfig.configure(config);
   }
+
   // after baseConfig was configured
+  for (let converter of baseConfig.globalValueConverters) {
+    aurelia.globalResources(`./${converter}`);
+    LogManager.getLogger('authentication').info(`Add globalResources value-converter: ${converter}`);
+  }
   const fetchConfig  = aurelia.container.get(FetchConfig);
   const clientConfig = aurelia.container.get(Config);
 
@@ -1344,10 +1819,3 @@ function configure(aurelia, config) {
   // Set the client on the config, for use throughout the plugin.
   baseConfig.client = client;
 }
-
-export {
-  configure,
-  FetchConfig,
-  AuthService,
-  AuthorizeStep
-};
