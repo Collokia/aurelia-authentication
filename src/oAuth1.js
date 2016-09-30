@@ -11,7 +11,7 @@ export class OAuth1 {
   constructor(storage, popup, config, ea) {
     this.storage  = storage;
     this.config   = config;
-    this.ea   = ea;
+    this.eventAggregator   = ea;
     this.popup    = popup;
     this.defaults = {
       url: null,
@@ -52,7 +52,7 @@ export class OAuth1 {
     const data        = extend(true, {}, userData, oauthData);
     const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
-    this.ea.publish('aurelia-authentication:exchangeForToken',{});
+    this.eventAggregator.publish('aurelia-authentication:exchangeForToken',{});
     return this.config.client.post(serverUrl, data, {credentials: credentials});
   }
 }

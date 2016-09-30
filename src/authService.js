@@ -469,11 +469,11 @@ export class AuthService {
    * @return {Promise<Object>|Promise<Error>}     Server response as Object
    */
   authenticate(name, redirectUri, userData = {}) {
-    this.ea.publish('aurelia-authentication:started', {name, redirectUri, userData});
+    this.eventAggregator.publish('aurelia-authentication:started', {name, redirectUri, userData});
     return this.authentication.authenticate(name, userData)
       .then(response => {
         this.setResponseObject(response);
-        this.ea.publish('aurelia-authentication:completed', {name, redirectUri, userData});
+        this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
