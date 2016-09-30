@@ -1,4 +1,4 @@
-var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13;
+var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _class6, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _dec12, _class7, _desc, _value, _class8, _dec13, _dec14, _class9, _desc2, _value2, _class10, _dec15, _class12, _dec16, _class13, _dec17, _class14;
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 
@@ -483,7 +483,133 @@ function randomState() {
   return encodeURIComponent(rand);
 }
 
-export var Storage = (_dec = inject(BaseConfig), _dec(_class2 = function () {
+export var CognitoAuth = (_dec = inject(BaseConfig), _dec(_class2 = function () {
+  function CognitoAuth(config) {
+    
+
+    if (config.cognito) {
+      AWSCognito.config.region = 'us-east-1';
+      this.userPoolId = 'us-east-1_aq4x7TaKA';
+      this.appClientId = 'qjgs33kfvs0en5jk2s2hpva9k';
+      AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+
+      this.poolData = {
+        UserPoolId: this.userPoolId,
+        ClientId: this.appClientId
+      };
+
+      this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+    }
+  }
+
+  CognitoAuth.prototype.registerUser = function registerUser(username, password, userAttributes) {
+    var _this4 = this;
+
+    var attributes = [];
+
+    attributes = userAttributes.map(function (it) {
+      return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
+    });
+
+    return new Promise(function (resolve, reject) {
+      _this4.userPool.signUp(username, password, attributes, null, function (err, result) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
+    });
+  };
+
+  CognitoAuth.prototype.confirmUser = function confirmUser(username, code) {
+    var userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise(function (resolve, reject) {
+      cognitoUser.confirmRegistration(code, true, function (err, result) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(true);
+      });
+    });
+  };
+
+  CognitoAuth.prototype.loginUser = function loginUser(username, password) {
+    var authData = {
+      Username: username,
+      Password: password
+    };
+
+    var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+
+    var userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise(function (resolve, reject) {
+      cognitoUser.authenticateUser(authDetails, {
+        onSuccess: function onSuccess(result) {
+          return resolve(result);
+        },
+        onFailure: function onFailure(err) {
+          return reject(err);
+        }
+      });
+    });
+  };
+
+  CognitoAuth.prototype.getSession = function getSession() {
+    var _this5 = this;
+
+    var cognitoUser = this.userPool.getCurrentUser();
+    return new Promise(function (resolve, reject) {
+      if (cognitoUser != null) {
+        cognitoUser.getSession(function (err) {
+          if (err) {
+            _this5.logoutUser();
+            reject(err);
+            return null;
+          }
+          resolve(cognitoUser);
+        });
+      } else {
+        _this5.logoutUser();
+        resolve(null);
+      }
+    });
+  };
+
+  CognitoAuth.prototype.logoutUser = function logoutUser() {
+    var cognitoUser = this.userPool.getCurrentUser();
+    if (cognitoUser != null) {
+      cognitoUser.signOut();
+    }
+  };
+
+  CognitoAuth.prototype.getUserAttributes = function getUserAttributes() {
+    var _this6 = this;
+
+    return new Promise(function (resolve, reject) {
+      _this6.session.user.getUserAttributes(function (err, result) {
+        if (err) reject(err);else resolve(result);
+      });
+    });
+  };
+
+  return CognitoAuth;
+}()) || _class2);
+
+export var Storage = (_dec2 = inject(BaseConfig), _dec2(_class3 = function () {
   function Storage(config) {
     
 
@@ -503,9 +629,9 @@ export var Storage = (_dec = inject(BaseConfig), _dec(_class2 = function () {
   };
 
   return Storage;
-}()) || _class2);
+}()) || _class3);
 
-export var AuthLock = (_dec2 = inject(Storage, BaseConfig), _dec2(_class3 = function () {
+export var AuthLock = (_dec3 = inject(Storage, BaseConfig), _dec3(_class4 = function () {
   function AuthLock(storage, config) {
     
 
@@ -529,7 +655,7 @@ export var AuthLock = (_dec2 = inject(Storage, BaseConfig), _dec2(_class3 = func
   }
 
   AuthLock.prototype.open = function open(options, userData) {
-    var _this4 = this;
+    var _this7 = this;
 
     if (typeof PLATFORM.global.Auth0Lock !== 'function') {
       throw new Error('Auth0Lock was not found in global scope. Please load it before using this provider.');
@@ -552,9 +678,9 @@ export var AuthLock = (_dec2 = inject(Storage, BaseConfig), _dec2(_class3 = func
       opts.callbackURL = provider.redirectUri;
       opts.authParams = opts.authParams || {};
       if (provider.scope) opts.authParams.scope = provider.scope;
-      if (provider.state) opts.authParams.state = _this4.storage.get(provider.name + '_state');
+      if (provider.state) opts.authParams.state = _this7.storage.get(provider.name + '_state');
 
-      _this4.lock.show(provider.lockOptions, function (err, profile, tokenOrCode) {
+      _this7.lock.show(provider.lockOptions, function (err, profile, tokenOrCode) {
         if (err) {
           reject(err);
         } else {
@@ -575,9 +701,9 @@ export var AuthLock = (_dec2 = inject(Storage, BaseConfig), _dec2(_class3 = func
   };
 
   return AuthLock;
-}()) || _class3);
+}()) || _class4);
 
-export var OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec3(_class4 = function () {
+export var OAuth1 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec4(_class5 = function () {
   function OAuth1(storage, popup, config, ea) {
     
 
@@ -595,7 +721,7 @@ export var OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator)
   }
 
   OAuth1.prototype.open = function open(options, userData) {
-    var _this5 = this;
+    var _this8 = this;
 
     var provider = extend(true, {}, this.defaults, options);
     var serverUrl = this.config.joinBase(provider.url);
@@ -607,16 +733,16 @@ export var OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator)
     return this.config.client.post(serverUrl).then(function (response) {
       var url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
-      if (_this5.config.platform === 'mobile') {
-        _this5.popup = _this5.popup.open(url, provider.name, provider.popupOptions);
+      if (_this8.config.platform === 'mobile') {
+        _this8.popup = _this8.popup.open(url, provider.name, provider.popupOptions);
       } else {
-        _this5.popup.popupWindow.location = url;
+        _this8.popup.popupWindow.location = url;
       }
 
-      var popupListener = _this5.config.platform === 'mobile' ? _this5.popup.eventListener(provider.redirectUri) : _this5.popup.pollPopup();
+      var popupListener = _this8.config.platform === 'mobile' ? _this8.popup.eventListener(provider.redirectUri) : _this8.popup.pollPopup();
 
       return popupListener.then(function (result) {
-        return _this5.exchangeForToken(result, userData, provider);
+        return _this8.exchangeForToken(result, userData, provider);
       });
     });
   };
@@ -630,9 +756,9 @@ export var OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator)
   };
 
   return OAuth1;
-}()) || _class4);
+}()) || _class5);
 
-export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec4(_class5 = function () {
+export var OAuth2 = (_dec5 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec5(_class6 = function () {
   function OAuth2(storage, popup, config, ea) {
     
 
@@ -658,7 +784,7 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
   }
 
   OAuth2.prototype.open = function open(options, userData) {
-    var _this6 = this;
+    var _this9 = this;
 
     var provider = extend(true, {}, this.defaults, options);
     var stateName = provider.name + '_state';
@@ -679,10 +805,10 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
       if (provider.responseType === 'token' || provider.responseType === 'id_token token' || provider.responseType === 'token id_token') {
         return oauthData;
       }
-      if (oauthData.state && oauthData.state !== _this6.storage.get(stateName)) {
+      if (oauthData.state && oauthData.state !== _this9.storage.get(stateName)) {
         return Promise.reject('OAuth 2.0 state parameter mismatch.');
       }
-      return _this6.exchangeForToken(oauthData, userData, provider);
+      return _this9.exchangeForToken(oauthData, userData, provider);
     });
   };
 
@@ -699,7 +825,7 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
   };
 
   OAuth2.prototype.buildQuery = function buildQuery(provider) {
-    var _this7 = this;
+    var _this10 = this;
 
     var query = {};
     var urlParams = ['defaultUrlParams', 'requiredUrlParams', 'optionalUrlParams'];
@@ -710,7 +836,7 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
         var paramValue = typeof provider[paramName] === 'function' ? provider[paramName]() : provider[camelizedName];
 
         if (paramName === 'state') {
-          paramValue = encodeURIComponent(_this7.storage.get(provider.name + '_state'));
+          paramValue = encodeURIComponent(_this10.storage.get(provider.name + '_state'));
         }
 
         if (paramName === 'scope' && Array.isArray(paramValue)) {
@@ -755,7 +881,7 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
   };
 
   return OAuth2;
-}()) || _class5);
+}()) || _class6);
 
 var camelCase = function camelCase(name) {
   return name.replace(/([\:\-\_]+(.))/g, function (_, separator, letter, offset) {
@@ -763,7 +889,7 @@ var camelCase = function camelCase(name) {
   });
 };
 
-export var Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock), _dec6 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec7 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.' }), _dec10 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.' }), _dec11 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec5(_class6 = (_class7 = function () {
+export var Authentication = (_dec6 = inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock), _dec7 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.' }), _dec10 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.' }), _dec11 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.' }), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec6(_class7 = (_class8 = function () {
   function Authentication(storage, config, oAuth1, oAuth2, auth0Lock) {
     
 
@@ -939,10 +1065,10 @@ export var Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2,
   };
 
   Authentication.prototype.toUpdateTokenCallstack = function toUpdateTokenCallstack() {
-    var _this8 = this;
+    var _this11 = this;
 
     return new Promise(function (resolve) {
-      return _this8.updateTokenCallstack.push(resolve);
+      return _this11.updateTokenCallstack.push(resolve);
     });
   };
 
@@ -1021,11 +1147,14 @@ export var Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2,
   }]);
 
   return Authentication;
-}(), (_applyDecoratedDescriptor(_class7.prototype, "getLoginRoute", [_dec6], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginRoute"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getLoginRedirect", [_dec7], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginRedirect"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getLoginUrl", [_dec8], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getSignupUrl", [_dec9], Object.getOwnPropertyDescriptor(_class7.prototype, "getSignupUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getProfileUrl", [_dec10], Object.getOwnPropertyDescriptor(_class7.prototype, "getProfileUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getToken", [_dec11], Object.getOwnPropertyDescriptor(_class7.prototype, "getToken"), _class7.prototype)), _class7)) || _class6);
+}(), (_applyDecoratedDescriptor(_class8.prototype, "getLoginRoute", [_dec7], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginRoute"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getLoginRedirect", [_dec8], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginRedirect"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getLoginUrl", [_dec9], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getSignupUrl", [_dec10], Object.getOwnPropertyDescriptor(_class8.prototype, "getSignupUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getProfileUrl", [_dec11], Object.getOwnPropertyDescriptor(_class8.prototype, "getProfileUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getToken", [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, "getToken"), _class8.prototype)), _class8)) || _class7);
 
-export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSignaler, EventAggregator), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = function () {
-  function AuthService(authentication, config, bindingSignaler, eventAggregator) {
-    var _this9 = this;
+var AuthType = { COGNITO: "cognito", REGULAR: "regular" };
+var AuthTypeSorageKey = "auth-type";
+
+export var AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfig, BindingSignaler, EventAggregator), _dec14 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec13(_class9 = (_class10 = function () {
+  function AuthService(authentication, cognitoAuth, config, bindingSignaler, eventAggregator) {
+    var _this12 = this;
 
     
 
@@ -1033,28 +1162,29 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     this.timeoutID = 0;
 
     this.storageEventHandler = function (event) {
-      if (event.key !== _this9.config.storageKey) {
+      if (event.key !== _this12.config.storageKey) {
         return;
       }
 
       LogManager.getLogger('authentication').info('Stored token changed event');
 
       if (event.newValue) {
-        _this9.authentication.storage.set(_this9.config.storageKey, event.newValue);
+        _this12.authentication.storage.set(_this12.config.storageKey, event.newValue);
       } else {
-        _this9.authentication.storage.remove(_this9.config.storageKey);
+        _this12.authentication.storage.remove(_this12.config.storageKey);
       }
 
-      var wasAuthenticated = _this9.authenticated;
-      _this9.authentication.responseAnalyzed = false;
-      _this9.updateAuthenticated();
+      var wasAuthenticated = _this12.authenticated;
+      _this12.authentication.responseAnalyzed = false;
+      _this12.updateAuthenticated();
 
-      if (_this9.config.storageChangedRedirect && wasAuthenticated !== _this9.authenticated) {
-        PLATFORM.location.assign(_this9.config.storageChangedRedirect);
+      if (_this12.config.storageChangedRedirect && wasAuthenticated !== _this12.authenticated) {
+        PLATFORM.location.assign(_this12.config.storageChangedRedirect);
       }
     };
 
     this.authentication = authentication;
+    this.cognitoAuth = cognitoAuth;
     this.config = config;
     this.bindingSignaler = bindingSignaler;
     this.eventAggregator = eventAggregator;
@@ -1076,21 +1206,21 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   }
 
   AuthService.prototype.setTimeout = function setTimeout(ttl) {
-    var _this10 = this;
+    var _this13 = this;
 
     this.clearTimeout();
 
     this.timeoutID = PLATFORM.global.setTimeout(function () {
-      if (_this10.config.autoUpdateToken && _this10.authentication.getAccessToken() && _this10.authentication.getRefreshToken()) {
-        _this10.updateToken();
+      if (_this13.config.autoUpdateToken && _this13.authentication.getAccessToken() && _this13.authentication.getRefreshToken()) {
+        _this13.updateToken();
 
         return;
       }
 
-      _this10.setResponseObject(null);
+      _this13.setResponseObject(null);
 
-      if (_this10.config.expiredRedirect) {
-        PLATFORM.location.assign(_this10.config.expiredRedirect);
+      if (_this13.config.expiredRedirect) {
+        PLATFORM.location.assign(_this13.config.expiredRedirect);
       }
     }, ttl);
   };
@@ -1102,8 +1232,9 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     this.timeoutID = 0;
   };
 
-  AuthService.prototype.setResponseObject = function setResponseObject(response) {
+  AuthService.prototype.setResponseObject = function setResponseObject(response, cognito) {
     this.authentication.setResponseObject(response);
+    this.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
 
     this.updateAuthenticated();
   };
@@ -1160,6 +1291,7 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   };
 
   AuthService.prototype.isAuthenticated = function isAuthenticated() {
+
     this.authentication.responseAnalyzed = false;
 
     var authenticated = this.authentication.isAuthenticated();
@@ -1188,8 +1320,20 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     return this.authentication.getPayload();
   };
 
+  AuthService.prototype.getLastAuthType = function getLastAuthType() {
+    return this.storage.set(AuthTypeSorageKey);
+  };
+
   AuthService.prototype.updateToken = function updateToken() {
-    var _this11 = this;
+    var _this14 = this;
+
+    var authType = this.getLastAuthType();
+
+    if (authType === AuthType.COGNITO) {
+      return this.cognitoAuth.getSession().then(function (response) {
+        return _this14.setResponseObject(response, true);
+      });
+    }
 
     if (!this.authentication.getRefreshToken()) {
       return Promise.reject(new Error('refreshToken not set'));
@@ -1204,11 +1348,11 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
       content[this.config.refreshTokenSubmitProp] = this.authentication.getRefreshToken();
 
       this.client.post(this.config.joinBase(this.config.refreshTokenUrl ? this.config.refreshTokenUrl : this.config.loginUrl), content).then(function (response) {
-        _this11.setResponseObject(response);
-        _this11.authentication.resolveUpdateTokenCallstack(_this11.isAuthenticated());
+        _this14.setResponseObject(response);
+        _this14.authentication.resolveUpdateTokenCallstack(_this14.isAuthenticated());
       }).catch(function (err) {
-        _this11.setResponseObject(null);
-        _this11.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
+        _this14.setResponseObject(null);
+        _this14.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
       });
     }
 
@@ -1216,7 +1360,7 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   };
 
   AuthService.prototype.signup = function signup(displayNameOrCredentials, emailOrOptions, passwordOrRedirectUri, options, redirectUri) {
-    var _this12 = this;
+    var _this15 = this;
 
     var content = void 0;
 
@@ -1232,17 +1376,29 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
       };
     }
     return this.client.post(this.config.joinBase(this.config.signupUrl), content, options).then(function (response) {
-      if (_this12.config.loginOnSignup) {
-        _this12.setResponseObject(response);
+      if (_this15.config.loginOnSignup) {
+        _this15.setResponseObject(response);
       }
-      _this12.authentication.redirect(redirectUri, _this12.config.signupRedirect);
+      _this15.authentication.redirect(redirectUri, _this15.config.signupRedirect);
 
       return response;
     });
   };
 
+  AuthService.prototype.cognitoSignUp = function cognitoSignUp(username, password, userAttributes, redirectUri) {
+    var _this16 = this;
+
+    return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
+      if (_this16.config.loginOnSignup) {
+        _this16.setResponseObject(response, true);
+      }
+      _this16.authentication.redirect(redirectUri, _this16.config.signupRedirect);
+      return response;
+    });
+  };
+
   AuthService.prototype.login = function login(emailOrCredentials, passwordOrOptions, optionsOrRedirectUri, redirectUri) {
-    var _this13 = this;
+    var _this17 = this;
 
     var content = void 0;
 
@@ -1263,25 +1419,35 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     }
 
     return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri).then(function (response) {
-      _this13.setResponseObject(response);
+      _this17.setResponseObject(response, false);
 
-      _this13.authentication.redirect(redirectUri, _this13.config.loginRedirect);
+      _this17.authentication.redirect(redirectUri, _this17.config.loginRedirect);
 
       return response;
     });
   };
 
+  AuthService.prototype.cognitoLogin = function cognitoLogin(username, password, optionsOrRedirectUri, redirectUri) {
+    var _this18 = this;
+
+    return this.cognitoAuth.loginUser(username, password).then(function (response) {
+      _this18.setResponseObject(response, true);
+      _this18.authentication.redirect(redirectUri, _this18.config.loginRedirect);
+      return response;
+    });
+  };
+
   AuthService.prototype.logout = function logout(redirectUri, query, name) {
-    var _this14 = this;
+    var _this19 = this;
 
     var localLogout = function localLogout(response) {
       return new Promise(function (resolve) {
-        _this14.setResponseObject(null);
+        _this19.setResponseObject(null);
 
-        _this14.authentication.redirect(redirectUri, _this14.config.logoutRedirect, query);
+        _this19.authentication.redirect(redirectUri, _this19.config.logoutRedirect, query);
 
-        if (typeof _this14.onLogout === 'function') {
-          _this14.onLogout(response);
+        if (typeof _this19.onLogout === 'function') {
+          _this19.onLogout(response);
         }
         resolve(response);
       });
@@ -1290,7 +1456,7 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     if (name) {
       if (this.config.providers[name].logoutEndpoint) {
         return this.authentication.logout(name).then(function (logoutResponse) {
-          var stateValue = _this14.authentication.storage.get(name + '_state');
+          var stateValue = _this19.authentication.storage.get(name + '_state');
           if (logoutResponse.state !== stateValue) {
             return Promise.reject('OAuth2 response state value differs');
           }
@@ -1303,27 +1469,27 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   };
 
   AuthService.prototype.authenticate = function authenticate(name, redirectUri) {
-    var _this15 = this;
+    var _this20 = this;
 
     var userData = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
     this.eventAggregator.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
     return this.authentication.authenticate(name, userData).then(function (response) {
-      _this15.setResponseObject(response);
-      _this15.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
+      _this20.setResponseObject(response);
+      _this20.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
 
-      _this15.authentication.redirect(redirectUri, _this15.config.loginRedirect);
+      _this20.authentication.redirect(redirectUri, _this20.config.loginRedirect);
 
       return response;
     });
   };
 
   AuthService.prototype.unlink = function unlink(name, redirectUri) {
-    var _this16 = this;
+    var _this21 = this;
 
     var unlinkUrl = this.config.joinBase(this.config.unlinkUrl) + name;
     return this.client.request(this.config.unlinkMethod, unlinkUrl).then(function (response) {
-      _this16.authentication.redirect(redirectUri);
+      _this21.authentication.redirect(redirectUri);
 
       return response;
     });
@@ -1343,9 +1509,9 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   }]);
 
   return AuthService;
-}(), (_applyDecoratedDescriptor(_class9.prototype, "getCurrentToken", [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, "getCurrentToken"), _class9.prototype)), _class9)) || _class8);
+}(), (_applyDecoratedDescriptor(_class10.prototype, "getCurrentToken", [_dec14], Object.getOwnPropertyDescriptor(_class10.prototype, "getCurrentToken"), _class10.prototype)), _class10)) || _class9);
 
-export var AuthenticateStep = (_dec14 = inject(AuthService), _dec14(_class11 = function () {
+export var AuthenticateStep = (_dec15 = inject(AuthService), _dec15(_class12 = function () {
   function AuthenticateStep(authService) {
     
 
@@ -1372,9 +1538,9 @@ export var AuthenticateStep = (_dec14 = inject(AuthService), _dec14(_class11 = f
   };
 
   return AuthenticateStep;
-}()) || _class11);
+}()) || _class12);
 
-export var AuthorizeStep = (_dec15 = inject(AuthService), _dec15(_class12 = function () {
+export var AuthorizeStep = (_dec16 = inject(AuthService), _dec16(_class13 = function () {
   function AuthorizeStep(authService) {
     
 
@@ -1403,9 +1569,9 @@ export var AuthorizeStep = (_dec15 = inject(AuthService), _dec15(_class12 = func
   };
 
   return AuthorizeStep;
-}()) || _class12);
+}()) || _class13);
 
-export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseConfig), _dec16(_class13 = function () {
+export var FetchConfig = (_dec17 = inject(HttpClient, Config, AuthService, BaseConfig), _dec17(_class14 = function () {
   function FetchConfig(httpClient, clientConfig, authService, config) {
     
 
@@ -1416,13 +1582,13 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
   }
 
   FetchConfig.prototype.configure = function configure(client) {
-    var _this17 = this;
+    var _this22 = this;
 
     if (Array.isArray(client)) {
       var _ret = function () {
         var configuredClients = [];
         client.forEach(function (toConfigure) {
-          configuredClients.push(_this17.configure(toConfigure));
+          configuredClients.push(_this22.configure(toConfigure));
         });
 
         return {
@@ -1453,20 +1619,20 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
   _createClass(FetchConfig, [{
     key: "interceptor",
     get: function get() {
-      var _this18 = this;
+      var _this23 = this;
 
       return {
         request: function request(_request) {
-          if (!_this18.config.httpInterceptor || !_this18.authService.isAuthenticated()) {
+          if (!_this23.config.httpInterceptor || !_this23.authService.isAuthenticated()) {
             return _request;
           }
-          var token = _this18.authService.getAccessToken();
+          var token = _this23.authService.getAccessToken();
 
-          if (_this18.config.authTokenType) {
-            token = _this18.config.authTokenType + " " + token;
+          if (_this23.config.authTokenType) {
+            token = _this23.config.authTokenType + " " + token;
           }
 
-          _request.headers.set(_this18.config.authHeader, token);
+          _request.headers.set(_this23.config.authHeader, token);
 
           return _request;
         },
@@ -1478,23 +1644,23 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
             if (_response.status !== 401) {
               return resolve(_response);
             }
-            if (!_this18.config.httpInterceptor || !_this18.authService.isTokenExpired()) {
+            if (!_this23.config.httpInterceptor || !_this23.authService.isTokenExpired()) {
               return resolve(_response);
             }
-            if (!_this18.config.useRefreshToken || !_this18.authService.getRefreshToken()) {
+            if (!_this23.config.useRefreshToken || !_this23.authService.getRefreshToken()) {
               return resolve(_response);
             }
 
-            return _this18.authService.updateToken().then(function () {
-              var token = _this18.authService.getAccessToken();
+            return _this23.authService.updateToken().then(function () {
+              var token = _this23.authService.getAccessToken();
 
-              if (_this18.config.authTokenType) {
-                token = _this18.config.authTokenType + " " + token;
+              if (_this23.config.authTokenType) {
+                token = _this23.config.authTokenType + " " + token;
               }
 
-              request.headers.set(_this18.config.authHeader, token);
+              request.headers.set(_this23.config.authHeader, token);
 
-              return _this18.client.fetch(request).then(resolve);
+              return _this23.client.fetch(request).then(resolve);
             });
           });
         }
@@ -1503,7 +1669,7 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
   }]);
 
   return FetchConfig;
-}()) || _class13);
+}()) || _class14);
 
 export function configure(aurelia, config) {
   if (!PLATFORM.location.origin) {
