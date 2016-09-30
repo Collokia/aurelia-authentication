@@ -1404,7 +1404,7 @@ export class AuthService {
    */
   setResponseObject(response,cognito) {
     this.authentication.setResponseObject(response);
-    this.storage.set(AuthTypeSorageKey, cognito?AuthType.COGNITO:AuthType.REGULAR);
+    this.authentication.storage.set(AuthTypeSorageKey, cognito?AuthType.COGNITO:AuthType.REGULAR);
 
     this.updateAuthenticated();
   }
@@ -1554,7 +1554,7 @@ export class AuthService {
   }
 
   getLastAuthType(){
-    return this.storage.set(AuthTypeSorageKey);
+    return this.authentication.storage.set(AuthTypeSorageKey);
   }
 
   /**

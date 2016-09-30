@@ -1266,7 +1266,7 @@ var AuthService = exports.AuthService = (_dec13 = (0, _aureliaDependencyInjectio
 
   AuthService.prototype.setResponseObject = function setResponseObject(response, cognito) {
     this.authentication.setResponseObject(response);
-    this.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
+    this.authentication.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
 
     this.updateAuthenticated();
   };
@@ -1353,7 +1353,7 @@ var AuthService = exports.AuthService = (_dec13 = (0, _aureliaDependencyInjectio
   };
 
   AuthService.prototype.getLastAuthType = function getLastAuthType() {
-    return this.storage.set(AuthTypeSorageKey);
+    return this.authentication.storage.set(AuthTypeSorageKey);
   };
 
   AuthService.prototype.updateToken = function updateToken() {

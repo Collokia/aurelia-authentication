@@ -1234,7 +1234,7 @@ export var AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfi
 
   AuthService.prototype.setResponseObject = function setResponseObject(response, cognito) {
     this.authentication.setResponseObject(response);
-    this.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
+    this.authentication.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
 
     this.updateAuthenticated();
   };
@@ -1321,7 +1321,7 @@ export var AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfi
   };
 
   AuthService.prototype.getLastAuthType = function getLastAuthType() {
-    return this.storage.set(AuthTypeSorageKey);
+    return this.authentication.storage.set(AuthTypeSorageKey);
   };
 
   AuthService.prototype.updateToken = function updateToken() {
