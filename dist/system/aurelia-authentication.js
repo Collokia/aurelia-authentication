@@ -413,7 +413,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           normalizedResponse.message = null;
           normalizedResponse.otherPossibleAccounts = null;
           normalizedResponse.originalData = null;
-          normalizedResponse.oauth_token = response.AuthenticationResult.AccessToken;
+          normalizedResponse.oauth_token = response.accessToken.jwtToken;
           console.log("_normalizeCognitoResponse", normalizedResponse);
           return normalizedResponse;
         };

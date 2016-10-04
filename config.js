@@ -1,13 +1,15 @@
 System.config({
-  defaultJSExtensions: true,
-  transpiler: false,
-  paths: {
+  "defaultJSExtensions": true,
+  "transpiler": "traceur",
+  "paths": {
     "github:*": "jspm_packages/github/*",
     "npm:*": "jspm_packages/npm/*"
-  },
+  }
+});
 
-  map: {
-    "aurelia-api": "npm:aurelia-api@3.0.0-rc8",
+System.config({
+  "map": {
+    "aurelia-api": "npm:aurelia-api@3.0.0-rc2",
     "aurelia-binding": "npm:aurelia-binding@1.0.0-rc.1.0.3",
     "aurelia-bootstrapper": "npm:aurelia-bootstrapper@1.0.0-rc.1.0.1",
     "aurelia-dependency-injection": "npm:aurelia-dependency-injection@1.0.0",
@@ -24,11 +26,13 @@ System.config({
     "extend": "npm:extend@3.0.0",
     "fetch": "github:github/fetch@1.0.0",
     "jwt-decode": "npm:jwt-decode@2.1.0",
-    "npm:aurelia-api@3.0.0-rc8": {
+    "traceur": "github:jmcriffey/bower-traceur@0.0.90",
+    "traceur-runtime": "github:jmcriffey/bower-traceur-runtime@0.0.90",
+    "npm:aurelia-api@3.0.0-rc2": {
       "aurelia-dependency-injection": "npm:aurelia-dependency-injection@1.0.0",
       "aurelia-fetch-client": "npm:aurelia-fetch-client@1.0.0",
-      "aurelia-path": "npm:aurelia-path@1.0.0",
-      "extend": "npm:extend@3.0.0"
+      "extend": "npm:extend@3.0.0",
+      "qs": "npm:qs@6.2.1"
     },
     "npm:aurelia-binding@1.0.0-rc.1.0.3": {
       "aurelia-logging": "npm:aurelia-logging@1.0.0-rc.1.0.1",
@@ -150,3 +154,4 @@ System.config({
     }
   }
 });
+
