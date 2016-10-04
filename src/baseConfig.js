@@ -168,6 +168,12 @@ export class BaseConfig {
 //OAuth provider specific related configuration
   // ============================================
   providers = {
+    cognito:{
+      region : 'us-east-1',
+      userPoolId :'us-east-1_thePooolId',
+      appClientId :'theAppClientId'
+    },
+
     facebook: {
       name: 'facebook',
       url: '/auth/facebook',

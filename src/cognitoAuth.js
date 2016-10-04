@@ -1,14 +1,10 @@
-import {inject} from 'aurelia-dependency-injection';
-import {BaseConfig}  from './baseConfig';
-
-@inject(BaseConfig)
 export class CognitoAuth {
 
   constructor(config) {
-    if (config.cognito) {
-      AWSCognito.config.region = 'us-east-1'; //config.cognito.region;
-      this.userPoolId = 'us-east-1_aq4x7TaKA'; //config.cognito.userPoolId;
-      this.appClientId = 'qjgs33kfvs0en5jk2s2hpva9k'; //config.cognito.appClientId;
+      this.config = config;
+      AWSCognito.config.region = config.providers.cognito.region;
+      this.userPoolId = config.providers.cognito.userPoolId;
+      this.appClientId = config.providers.cognito.appClientId;
 
       // Required as mock credentials
       AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
@@ -21,7 +17,6 @@ export class CognitoAuth {
 
       // create user pool
       this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
-    }
   }
 
   // userAttributes should be an array of objects like
@@ -87,10 +82,39 @@ export class CognitoAuth {
 
     return new Promise((resolve, reject)=> {
       cognitoUser.authenticateUser(authDetails, {
-        onSuccess: (result) => resolve(result),
-        onFailure: (err) => reject(err)
+        onSuccess: (result) => resolve(this._normalizeCognitoResponse(result)),
+        onFailure: (err) => resolve(this._normalizeCognitoResponseError(err))
       });
     });
+  }
+
+  _normalizeCognitoResponse(response){
+    console.log("_normalizeCognitoResponse - in",response)
+    const normalizedResponse = {};
+    normalizedResponse.status = "success";
+    normalizedResponse[this.config.accessTokenName] = response.accessToken.jwtToken;
+    normalizedResponse[this.config.refreshTokenName] = response.refreshToken.jwtToken;
+    normalizedResponse[this.config.idTokenName] = response.idToken.jwtToken;
+    normalizedResponse.message = null;
+    normalizedResponse.otherPossibleAccounts = null;
+    normalizedResponse.originalData = null;
+    normalizedResponse.oauth_token = response.accessToken.jwtToken;
+console.log("_normalizeCognitoResponse",normalizedResponse)
+    return normalizedResponse;
+  }
+
+  _normalizeCognitoResponseError(err){
+    const normalizedResponse = {};
+    normalizedResponse.status = "success";
+    normalizedResponse[this.config.accessTokenName] = null;
+    normalizedResponse[this.config.refreshTokenName] = null;
+    normalizedResponse[this.config.idTokenName] = null;
+    normalizedResponse.message = err;
+    normalizedResponse.otherPossibleAccounts = null;
+    normalizedResponse.originalData = null;
+    normalizedResponse.oauth_token = null;
+    console.log("_normalizeCognitoResponseError",normalizedResponse)
+    return normalizedResponse;
   }
 
   getSession() {

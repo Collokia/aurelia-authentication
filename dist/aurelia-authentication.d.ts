@@ -15,6 +15,21 @@ export declare class Popup {
   eventListener(redirectUri?: any): any;
   pollPopup(): any;
 }
+export declare class CognitoAuth {
+  constructor(config?: any);
+  
+  // userAttributes should be an array of objects like
+  // [{
+  //   Name: 'email',
+  //   Value: 'the@email.com'
+  // }]
+  registerUser(username?: any, password?: any, userAttributes?: any): any;
+  confirmUser(username?: any, code?: any): any;
+  loginUser(username?: any, password?: any): any;
+  getSession(): any;
+  logoutUser(): any;
+  getUserAttributes(): any;
+}
 export declare class AuthError extends Error {
   constructor(message?: any, data?: any);
 }
@@ -202,21 +217,6 @@ export declare class BaseConfig {
      */
   current: any;
 }
-export declare class CognitoAuth {
-  constructor(config?: any);
-  
-  // userAttributes should be an array of objects like
-  // [{
-  //   Name: 'email',
-  //   Value: 'the@email.com'
-  // }]
-  registerUser(username?: any, password?: any, userAttributes?: any): any;
-  confirmUser(username?: any, code?: any): any;
-  loginUser(username?: any, password?: any): any;
-  getSession(): any;
-  logoutUser(): any;
-  getUserAttributes(): any;
-}
 export declare class Storage {
   constructor(config?: any);
   get(key?: any): any;
@@ -327,7 +327,7 @@ export declare class AuthService {
      * @param  {BindingSignaler} bindingSignaler The BindingSignaler instance to be used
      * @param  {EventAggregator} eventAggregator The EventAggregator instance to be used
      */
-  constructor(authentication?: any, cognitoAuth?: any, config?: any, bindingSignaler?: any, eventAggregator?: any);
+  constructor(authentication?: any, config?: any, bindingSignaler?: any, eventAggregator?: any);
   
   /**
      * The handler used for storage events. Detects and handles authentication changes in other tabs/windows

@@ -1,4 +1,4 @@
-var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _class6, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _dec12, _class7, _desc, _value, _class8, _dec13, _dec14, _class9, _desc2, _value2, _class10, _dec15, _class12, _dec16, _class13, _dec17, _class14;
+var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13;
 
 function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
   var desc = {};
@@ -161,6 +161,146 @@ const parseUrl = url => {
   return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
 
+export let CognitoAuth = class CognitoAuth {
+
+  constructor(config) {
+    this.config = config;
+    AWSCognito.config.region = config.providers.cognito.region;
+    this.userPoolId = config.providers.cognito.userPoolId;
+    this.appClientId = config.providers.cognito.appClientId;
+
+    AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+
+    this.poolData = {
+      UserPoolId: this.userPoolId,
+      ClientId: this.appClientId
+    };
+
+    this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+  }
+
+  registerUser(username, password, userAttributes) {
+    let attributes = [];
+
+    attributes = userAttributes.map(it => new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it));
+
+    return new Promise((resolve, reject) => {
+      this.userPool.signUp(username, password, attributes, null, (err, result) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
+    });
+  }
+
+  confirmUser(username, code) {
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise((resolve, reject) => {
+      cognitoUser.confirmRegistration(code, true, (err, result) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(true);
+      });
+    });
+  }
+
+  loginUser(username, password) {
+    let authData = {
+      Username: username,
+      Password: password
+    };
+
+    let authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise((resolve, reject) => {
+      cognitoUser.authenticateUser(authDetails, {
+        onSuccess: result => resolve(this._normalizeCognitoResponse(result)),
+        onFailure: err => resolve(this._normalizeCognitoResponseError(err))
+      });
+    });
+  }
+
+  _normalizeCognitoResponse(response) {
+    console.log("_normalizeCognitoResponse - in", response);
+    const normalizedResponse = {};
+    normalizedResponse.status = "success";
+    normalizedResponse[this.config.accessTokenName] = response.accessToken.jwtToken;
+    normalizedResponse[this.config.refreshTokenName] = response.refreshToken.jwtToken;
+    normalizedResponse[this.config.idTokenName] = response.idToken.jwtToken;
+    normalizedResponse.message = null;
+    normalizedResponse.otherPossibleAccounts = null;
+    normalizedResponse.originalData = null;
+    normalizedResponse.oauth_token = response.AuthenticationResult.AccessToken;
+    console.log("_normalizeCognitoResponse", normalizedResponse);
+    return normalizedResponse;
+  }
+
+  _normalizeCognitoResponseError(err) {
+    const normalizedResponse = {};
+    normalizedResponse.status = "success";
+    normalizedResponse[this.config.accessTokenName] = null;
+    normalizedResponse[this.config.refreshTokenName] = null;
+    normalizedResponse[this.config.idTokenName] = null;
+    normalizedResponse.message = err;
+    normalizedResponse.otherPossibleAccounts = null;
+    normalizedResponse.originalData = null;
+    normalizedResponse.oauth_token = null;
+    console.log("_normalizeCognitoResponseError", normalizedResponse);
+    return normalizedResponse;
+  }
+
+  getSession() {
+    let cognitoUser = this.userPool.getCurrentUser();
+    return new Promise((resolve, reject) => {
+      if (cognitoUser != null) {
+        cognitoUser.getSession(err => {
+          if (err) {
+            this.logoutUser();
+            reject(err);
+            return null;
+          }
+          resolve(cognitoUser);
+        });
+      } else {
+        this.logoutUser();
+        resolve(null);
+      }
+    });
+  }
+
+  logoutUser() {
+    let cognitoUser = this.userPool.getCurrentUser();
+    if (cognitoUser != null) {
+      cognitoUser.signOut();
+    }
+  }
+
+  getUserAttributes() {
+    return new Promise((resolve, reject) => {
+      this.session.user.getUserAttributes((err, result) => {
+        if (err) reject(err);else resolve(result);
+      });
+    });
+  }
+};
+
 export let AuthError = class AuthError extends Error {
   constructor(message, data) {
     super(message);
@@ -221,6 +361,12 @@ export let BaseConfig = class BaseConfig {
     this.getRefreshTokenFromResponse = null;
     this.globalValueConverters = ['authFilterValueConverter'];
     this.providers = {
+      cognito: {
+        region: 'us-east-1',
+        userPoolId: 'us-east-1_thePooolId',
+        appClientId: 'theAppClientId'
+      },
+
       facebook: {
         name: 'facebook',
         url: '/auth/facebook',
@@ -442,118 +588,7 @@ function randomState() {
   return encodeURIComponent(rand);
 }
 
-export let CognitoAuth = (_dec = inject(BaseConfig), _dec(_class2 = class CognitoAuth {
-
-  constructor(config) {
-    if (config.cognito) {
-      AWSCognito.config.region = 'us-east-1';
-      this.userPoolId = 'us-east-1_aq4x7TaKA';
-      this.appClientId = 'qjgs33kfvs0en5jk2s2hpva9k';
-      AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-
-      this.poolData = {
-        UserPoolId: this.userPoolId,
-        ClientId: this.appClientId
-      };
-
-      this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
-    }
-  }
-
-  registerUser(username, password, userAttributes) {
-    let attributes = [];
-
-    attributes = userAttributes.map(it => new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it));
-
-    return new Promise((resolve, reject) => {
-      this.userPool.signUp(username, password, attributes, null, (err, result) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(result);
-      });
-    });
-  }
-
-  confirmUser(username, code) {
-    let userData = {
-      Username: username,
-      Pool: this.userPool
-    };
-
-    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-
-    return new Promise((resolve, reject) => {
-      cognitoUser.confirmRegistration(code, true, (err, result) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(true);
-      });
-    });
-  }
-
-  loginUser(username, password) {
-    let authData = {
-      Username: username,
-      Password: password
-    };
-
-    let authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
-
-    let userData = {
-      Username: username,
-      Pool: this.userPool
-    };
-
-    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-
-    return new Promise((resolve, reject) => {
-      cognitoUser.authenticateUser(authDetails, {
-        onSuccess: result => resolve(result),
-        onFailure: err => reject(err)
-      });
-    });
-  }
-
-  getSession() {
-    let cognitoUser = this.userPool.getCurrentUser();
-    return new Promise((resolve, reject) => {
-      if (cognitoUser != null) {
-        cognitoUser.getSession(err => {
-          if (err) {
-            this.logoutUser();
-            reject(err);
-            return null;
-          }
-          resolve(cognitoUser);
-        });
-      } else {
-        this.logoutUser();
-        resolve(null);
-      }
-    });
-  }
-
-  logoutUser() {
-    let cognitoUser = this.userPool.getCurrentUser();
-    if (cognitoUser != null) {
-      cognitoUser.signOut();
-    }
-  }
-
-  getUserAttributes() {
-    return new Promise((resolve, reject) => {
-      this.session.user.getUserAttributes((err, result) => {
-        if (err) reject(err);else resolve(result);
-      });
-    });
-  }
-}) || _class2);
-
-export let Storage = (_dec2 = inject(BaseConfig), _dec2(_class3 = class Storage {
+export let Storage = (_dec = inject(BaseConfig), _dec(_class2 = class Storage {
   constructor(config) {
     this.config = config;
   }
@@ -569,9 +604,9 @@ export let Storage = (_dec2 = inject(BaseConfig), _dec2(_class3 = class Storage 
   remove(key) {
     PLATFORM.global[this.config.storage].removeItem(key);
   }
-}) || _class3);
+}) || _class2);
 
-export let AuthLock = (_dec3 = inject(Storage, BaseConfig), _dec3(_class4 = class AuthLock {
+export let AuthLock = (_dec2 = inject(Storage, BaseConfig), _dec2(_class3 = class AuthLock {
   constructor(storage, config) {
     this.storage = storage;
     this.config = config;
@@ -635,9 +670,9 @@ export let AuthLock = (_dec3 = inject(Storage, BaseConfig), _dec3(_class4 = clas
       throw new Error('Only `token` responseType is supported');
     });
   }
-}) || _class4);
+}) || _class3);
 
-export let OAuth1 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec4(_class5 = class OAuth1 {
+export let OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec3(_class4 = class OAuth1 {
   constructor(storage, popup, config, ea) {
     this.storage = storage;
     this.config = config;
@@ -682,9 +717,9 @@ export let OAuth1 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken', {});
     return this.config.client.post(serverUrl, data, { credentials: credentials });
   }
-}) || _class5);
+}) || _class4);
 
-export let OAuth2 = (_dec5 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec5(_class6 = class OAuth2 {
+export let OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec4(_class5 = class OAuth2 {
   constructor(storage, popup, config, ea) {
     this.storage = storage;
     this.config = config;
@@ -799,7 +834,7 @@ export let OAuth2 = (_dec5 = inject(Storage, Popup, BaseConfig, EventAggregator)
     }
     return query;
   }
-}) || _class6);
+}) || _class5);
 
 const camelCase = function (name) {
   return name.replace(/([\:\-\_]+(.))/g, function (_, separator, letter, offset) {
@@ -807,7 +842,7 @@ const camelCase = function (name) {
   });
 };
 
-export let Authentication = (_dec6 = inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock), _dec7 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.' }), _dec10 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.' }), _dec11 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.' }), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec6(_class7 = (_class8 = class Authentication {
+export let Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock), _dec6 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec7 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.' }), _dec10 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.' }), _dec11 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec5(_class6 = (_class7 = class Authentication {
   constructor(storage, config, oAuth1, oAuth2, auth0Lock) {
     this.storage = storage;
     this.config = config;
@@ -1046,13 +1081,13 @@ export let Authentication = (_dec6 = inject(Storage, BaseConfig, OAuth1, OAuth2,
       PLATFORM.location.href = defaultRedirectUrl + (query ? `?${ buildQueryString(query) }` : '');
     }
   }
-}, (_applyDecoratedDescriptor(_class8.prototype, "getLoginRoute", [_dec7], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginRoute"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getLoginRedirect", [_dec8], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginRedirect"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getLoginUrl", [_dec9], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getSignupUrl", [_dec10], Object.getOwnPropertyDescriptor(_class8.prototype, "getSignupUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getProfileUrl", [_dec11], Object.getOwnPropertyDescriptor(_class8.prototype, "getProfileUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getToken", [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, "getToken"), _class8.prototype)), _class8)) || _class7);
+}, (_applyDecoratedDescriptor(_class7.prototype, "getLoginRoute", [_dec6], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginRoute"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getLoginRedirect", [_dec7], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginRedirect"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getLoginUrl", [_dec8], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getSignupUrl", [_dec9], Object.getOwnPropertyDescriptor(_class7.prototype, "getSignupUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getProfileUrl", [_dec10], Object.getOwnPropertyDescriptor(_class7.prototype, "getProfileUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getToken", [_dec11], Object.getOwnPropertyDescriptor(_class7.prototype, "getToken"), _class7.prototype)), _class7)) || _class6);
 
 const AuthType = { COGNITO: "cognito", REGULAR: "regular" };
 const AuthTypeSorageKey = "auth-type";
 
-export let AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfig, BindingSignaler, EventAggregator), _dec14 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec13(_class9 = (_class10 = class AuthService {
-  constructor(authentication, cognitoAuth, config, bindingSignaler, eventAggregator) {
+export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSignaler, EventAggregator), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = class AuthService {
+  constructor(authentication, config, bindingSignaler, eventAggregator) {
     this.authenticated = false;
     this.timeoutID = 0;
 
@@ -1079,7 +1114,10 @@ export let AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfi
     };
 
     this.authentication = authentication;
-    this.cognitoAuth = cognitoAuth;
+    if (config.providers.cognito) {
+      this.cognitoAuth = new CognitoAuth(config);
+    }
+
     this.config = config;
     this.bindingSignaler = bindingSignaler;
     this.eventAggregator = eventAggregator;
@@ -1374,9 +1412,9 @@ export let AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfi
       return response;
     });
   }
-}, (_applyDecoratedDescriptor(_class10.prototype, "getCurrentToken", [_dec14], Object.getOwnPropertyDescriptor(_class10.prototype, "getCurrentToken"), _class10.prototype)), _class10)) || _class9);
+}, (_applyDecoratedDescriptor(_class9.prototype, "getCurrentToken", [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, "getCurrentToken"), _class9.prototype)), _class9)) || _class8);
 
-export let AuthenticateStep = (_dec15 = inject(AuthService), _dec15(_class12 = class AuthenticateStep {
+export let AuthenticateStep = (_dec14 = inject(AuthService), _dec14(_class11 = class AuthenticateStep {
   constructor(authService) {
     this.authService = authService;
   }
@@ -1395,9 +1433,9 @@ export let AuthenticateStep = (_dec15 = inject(AuthService), _dec15(_class12 = c
 
     return next();
   }
-}) || _class12);
+}) || _class11);
 
-export let AuthorizeStep = (_dec16 = inject(AuthService), _dec16(_class13 = class AuthorizeStep {
+export let AuthorizeStep = (_dec15 = inject(AuthService), _dec15(_class12 = class AuthorizeStep {
   constructor(authService) {
     LogManager.getLogger('authentication').warn('AuthorizeStep is deprecated. Use AuthenticateStep instead.');
 
@@ -1418,9 +1456,9 @@ export let AuthorizeStep = (_dec16 = inject(AuthService), _dec16(_class13 = clas
 
     return next();
   }
-}) || _class13);
+}) || _class12);
 
-export let FetchConfig = (_dec17 = inject(HttpClient, Config, AuthService, BaseConfig), _dec17(_class14 = class FetchConfig {
+export let FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseConfig), _dec16(_class13 = class FetchConfig {
   constructor(httpClient, clientConfig, authService, config) {
     this.httpClient = httpClient;
     this.clientConfig = clientConfig;
@@ -1501,7 +1539,7 @@ export let FetchConfig = (_dec17 = inject(HttpClient, Config, AuthService, BaseC
 
     return client;
   }
-}) || _class14);
+}) || _class13);
 
 export function configure(aurelia, config) {
   if (!PLATFORM.location.origin) {

@@ -3,7 +3,7 @@
 System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api"], function (_export, _context) {
   "use strict";
 
-  var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _class6, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _dec12, _class7, _desc, _value, _class8, _dec13, _dec14, _class9, _desc2, _value2, _class10, _dec15, _class12, _dec16, _class13, _dec17, _class14, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, AuthError, BaseConfig, CognitoAuth, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
+  var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, CognitoAuth, AuthError, BaseConfig, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
 
   function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
     var desc = {};
@@ -316,23 +316,182 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
       };
 
+      _export("CognitoAuth", CognitoAuth = function () {
+        function CognitoAuth(config) {
+          
+
+          this.config = config;
+          AWSCognito.config.region = config.providers.cognito.region;
+          this.userPoolId = config.providers.cognito.userPoolId;
+          this.appClientId = config.providers.cognito.appClientId;
+
+          AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+
+          this.poolData = {
+            UserPoolId: this.userPoolId,
+            ClientId: this.appClientId
+          };
+
+          this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+        }
+
+        CognitoAuth.prototype.registerUser = function registerUser(username, password, userAttributes) {
+          var _this3 = this;
+
+          var attributes = [];
+
+          attributes = userAttributes.map(function (it) {
+            return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
+          });
+
+          return new Promise(function (resolve, reject) {
+            _this3.userPool.signUp(username, password, attributes, null, function (err, result) {
+              if (err) {
+                reject(err);
+                return;
+              }
+              resolve(result);
+            });
+          });
+        };
+
+        CognitoAuth.prototype.confirmUser = function confirmUser(username, code) {
+          var userData = {
+            Username: username,
+            Pool: this.userPool
+          };
+
+          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+          return new Promise(function (resolve, reject) {
+            cognitoUser.confirmRegistration(code, true, function (err, result) {
+              if (err) {
+                reject(err);
+                return;
+              }
+              resolve(true);
+            });
+          });
+        };
+
+        CognitoAuth.prototype.loginUser = function loginUser(username, password) {
+          var _this4 = this;
+
+          var authData = {
+            Username: username,
+            Password: password
+          };
+
+          var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+
+          var userData = {
+            Username: username,
+            Pool: this.userPool
+          };
+
+          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+          return new Promise(function (resolve, reject) {
+            cognitoUser.authenticateUser(authDetails, {
+              onSuccess: function onSuccess(result) {
+                return resolve(_this4._normalizeCognitoResponse(result));
+              },
+              onFailure: function onFailure(err) {
+                return resolve(_this4._normalizeCognitoResponseError(err));
+              }
+            });
+          });
+        };
+
+        CognitoAuth.prototype._normalizeCognitoResponse = function _normalizeCognitoResponse(response) {
+          console.log("_normalizeCognitoResponse - in", response);
+          var normalizedResponse = {};
+          normalizedResponse.status = "success";
+          normalizedResponse[this.config.accessTokenName] = response.accessToken.jwtToken;
+          normalizedResponse[this.config.refreshTokenName] = response.refreshToken.jwtToken;
+          normalizedResponse[this.config.idTokenName] = response.idToken.jwtToken;
+          normalizedResponse.message = null;
+          normalizedResponse.otherPossibleAccounts = null;
+          normalizedResponse.originalData = null;
+          normalizedResponse.oauth_token = response.AuthenticationResult.AccessToken;
+          console.log("_normalizeCognitoResponse", normalizedResponse);
+          return normalizedResponse;
+        };
+
+        CognitoAuth.prototype._normalizeCognitoResponseError = function _normalizeCognitoResponseError(err) {
+          var normalizedResponse = {};
+          normalizedResponse.status = "success";
+          normalizedResponse[this.config.accessTokenName] = null;
+          normalizedResponse[this.config.refreshTokenName] = null;
+          normalizedResponse[this.config.idTokenName] = null;
+          normalizedResponse.message = err;
+          normalizedResponse.otherPossibleAccounts = null;
+          normalizedResponse.originalData = null;
+          normalizedResponse.oauth_token = null;
+          console.log("_normalizeCognitoResponseError", normalizedResponse);
+          return normalizedResponse;
+        };
+
+        CognitoAuth.prototype.getSession = function getSession() {
+          var _this5 = this;
+
+          var cognitoUser = this.userPool.getCurrentUser();
+          return new Promise(function (resolve, reject) {
+            if (cognitoUser != null) {
+              cognitoUser.getSession(function (err) {
+                if (err) {
+                  _this5.logoutUser();
+                  reject(err);
+                  return null;
+                }
+                resolve(cognitoUser);
+              });
+            } else {
+              _this5.logoutUser();
+              resolve(null);
+            }
+          });
+        };
+
+        CognitoAuth.prototype.logoutUser = function logoutUser() {
+          var cognitoUser = this.userPool.getCurrentUser();
+          if (cognitoUser != null) {
+            cognitoUser.signOut();
+          }
+        };
+
+        CognitoAuth.prototype.getUserAttributes = function getUserAttributes() {
+          var _this6 = this;
+
+          return new Promise(function (resolve, reject) {
+            _this6.session.user.getUserAttributes(function (err, result) {
+              if (err) reject(err);else resolve(result);
+            });
+          });
+        };
+
+        return CognitoAuth;
+      }());
+
+      _export("CognitoAuth", CognitoAuth);
+
       _export("AuthError", AuthError = function (_Error) {
         _inherits(AuthError, _Error);
 
         function AuthError(message, data) {
           
 
-          var _this3 = _possibleConstructorReturn(this, _Error.call(this, message));
+          var _this7 = _possibleConstructorReturn(this, _Error.call(this, message));
 
-          _this3.name = _this3.constructor.name;
-          _this3.message = message;
-          _this3.data = data;
+          _this7.name = _this7.constructor.name;
+          _this7.message = message;
+          _this7.data = data;
           if (typeof Error.captureStackTrace === 'function') {
-            Error.captureStackTrace(_this3, _this3.constructor);
+            Error.captureStackTrace(_this7, _this7.constructor);
           } else {
-            _this3.stack = new Error(message).stack;
+            _this7.stack = new Error(message).stack;
           }
-          return _this3;
+          return _this7;
         }
 
         return AuthError;
@@ -389,6 +548,12 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           this.getRefreshTokenFromResponse = null;
           this.globalValueConverters = ['authFilterValueConverter'];
           this.providers = {
+            cognito: {
+              region: 'us-east-1',
+              userPoolId: 'us-east-1_thePooolId',
+              appClientId: 'theAppClientId'
+            },
+
             facebook: {
               name: 'facebook',
               url: '/auth/facebook',
@@ -618,135 +783,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
 
       _export("BaseConfig", BaseConfig);
 
-      _export("CognitoAuth", CognitoAuth = (_dec = inject(BaseConfig), _dec(_class2 = function () {
-        function CognitoAuth(config) {
-          
-
-          if (config.cognito) {
-            AWSCognito.config.region = 'us-east-1';
-            this.userPoolId = 'us-east-1_aq4x7TaKA';
-            this.appClientId = 'qjgs33kfvs0en5jk2s2hpva9k';
-            AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-
-            this.poolData = {
-              UserPoolId: this.userPoolId,
-              ClientId: this.appClientId
-            };
-
-            this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
-          }
-        }
-
-        CognitoAuth.prototype.registerUser = function registerUser(username, password, userAttributes) {
-          var _this4 = this;
-
-          var attributes = [];
-
-          attributes = userAttributes.map(function (it) {
-            return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
-          });
-
-          return new Promise(function (resolve, reject) {
-            _this4.userPool.signUp(username, password, attributes, null, function (err, result) {
-              if (err) {
-                reject(err);
-                return;
-              }
-              resolve(result);
-            });
-          });
-        };
-
-        CognitoAuth.prototype.confirmUser = function confirmUser(username, code) {
-          var userData = {
-            Username: username,
-            Pool: this.userPool
-          };
-
-          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-
-          return new Promise(function (resolve, reject) {
-            cognitoUser.confirmRegistration(code, true, function (err, result) {
-              if (err) {
-                reject(err);
-                return;
-              }
-              resolve(true);
-            });
-          });
-        };
-
-        CognitoAuth.prototype.loginUser = function loginUser(username, password) {
-          var authData = {
-            Username: username,
-            Password: password
-          };
-
-          var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
-
-          var userData = {
-            Username: username,
-            Pool: this.userPool
-          };
-
-          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-
-          return new Promise(function (resolve, reject) {
-            cognitoUser.authenticateUser(authDetails, {
-              onSuccess: function onSuccess(result) {
-                return resolve(result);
-              },
-              onFailure: function onFailure(err) {
-                return reject(err);
-              }
-            });
-          });
-        };
-
-        CognitoAuth.prototype.getSession = function getSession() {
-          var _this5 = this;
-
-          var cognitoUser = this.userPool.getCurrentUser();
-          return new Promise(function (resolve, reject) {
-            if (cognitoUser != null) {
-              cognitoUser.getSession(function (err) {
-                if (err) {
-                  _this5.logoutUser();
-                  reject(err);
-                  return null;
-                }
-                resolve(cognitoUser);
-              });
-            } else {
-              _this5.logoutUser();
-              resolve(null);
-            }
-          });
-        };
-
-        CognitoAuth.prototype.logoutUser = function logoutUser() {
-          var cognitoUser = this.userPool.getCurrentUser();
-          if (cognitoUser != null) {
-            cognitoUser.signOut();
-          }
-        };
-
-        CognitoAuth.prototype.getUserAttributes = function getUserAttributes() {
-          var _this6 = this;
-
-          return new Promise(function (resolve, reject) {
-            _this6.session.user.getUserAttributes(function (err, result) {
-              if (err) reject(err);else resolve(result);
-            });
-          });
-        };
-
-        return CognitoAuth;
-      }()) || _class2));
-
-      _export("CognitoAuth", CognitoAuth);
-
-      _export("Storage", Storage = (_dec2 = inject(BaseConfig), _dec2(_class3 = function () {
+      _export("Storage", Storage = (_dec = inject(BaseConfig), _dec(_class2 = function () {
         function Storage(config) {
           
 
@@ -766,11 +803,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         return Storage;
-      }()) || _class3));
+      }()) || _class2));
 
       _export("Storage", Storage);
 
-      _export("AuthLock", AuthLock = (_dec3 = inject(Storage, BaseConfig), _dec3(_class4 = function () {
+      _export("AuthLock", AuthLock = (_dec2 = inject(Storage, BaseConfig), _dec2(_class3 = function () {
         function AuthLock(storage, config) {
           
 
@@ -794,7 +831,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }
 
         AuthLock.prototype.open = function open(options, userData) {
-          var _this7 = this;
+          var _this8 = this;
 
           if (typeof PLATFORM.global.Auth0Lock !== 'function') {
             throw new Error('Auth0Lock was not found in global scope. Please load it before using this provider.');
@@ -817,9 +854,9 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             opts.callbackURL = provider.redirectUri;
             opts.authParams = opts.authParams || {};
             if (provider.scope) opts.authParams.scope = provider.scope;
-            if (provider.state) opts.authParams.state = _this7.storage.get(provider.name + '_state');
+            if (provider.state) opts.authParams.state = _this8.storage.get(provider.name + '_state');
 
-            _this7.lock.show(provider.lockOptions, function (err, profile, tokenOrCode) {
+            _this8.lock.show(provider.lockOptions, function (err, profile, tokenOrCode) {
               if (err) {
                 reject(err);
               } else {
@@ -840,11 +877,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         return AuthLock;
-      }()) || _class4));
+      }()) || _class3));
 
       _export("AuthLock", AuthLock);
 
-      _export("OAuth1", OAuth1 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec4(_class5 = function () {
+      _export("OAuth1", OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec3(_class4 = function () {
         function OAuth1(storage, popup, config, ea) {
           
 
@@ -862,7 +899,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }
 
         OAuth1.prototype.open = function open(options, userData) {
-          var _this8 = this;
+          var _this9 = this;
 
           var provider = extend(true, {}, this.defaults, options);
           var serverUrl = this.config.joinBase(provider.url);
@@ -874,16 +911,16 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           return this.config.client.post(serverUrl).then(function (response) {
             var url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
-            if (_this8.config.platform === 'mobile') {
-              _this8.popup = _this8.popup.open(url, provider.name, provider.popupOptions);
+            if (_this9.config.platform === 'mobile') {
+              _this9.popup = _this9.popup.open(url, provider.name, provider.popupOptions);
             } else {
-              _this8.popup.popupWindow.location = url;
+              _this9.popup.popupWindow.location = url;
             }
 
-            var popupListener = _this8.config.platform === 'mobile' ? _this8.popup.eventListener(provider.redirectUri) : _this8.popup.pollPopup();
+            var popupListener = _this9.config.platform === 'mobile' ? _this9.popup.eventListener(provider.redirectUri) : _this9.popup.pollPopup();
 
             return popupListener.then(function (result) {
-              return _this8.exchangeForToken(result, userData, provider);
+              return _this9.exchangeForToken(result, userData, provider);
             });
           });
         };
@@ -897,11 +934,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         return OAuth1;
-      }()) || _class5));
+      }()) || _class4));
 
       _export("OAuth1", OAuth1);
 
-      _export("OAuth2", OAuth2 = (_dec5 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec5(_class6 = function () {
+      _export("OAuth2", OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator), _dec4(_class5 = function () {
         function OAuth2(storage, popup, config, ea) {
           
 
@@ -927,7 +964,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }
 
         OAuth2.prototype.open = function open(options, userData) {
-          var _this9 = this;
+          var _this10 = this;
 
           var provider = extend(true, {}, this.defaults, options);
           var stateName = provider.name + '_state';
@@ -948,10 +985,10 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             if (provider.responseType === 'token' || provider.responseType === 'id_token token' || provider.responseType === 'token id_token') {
               return oauthData;
             }
-            if (oauthData.state && oauthData.state !== _this9.storage.get(stateName)) {
+            if (oauthData.state && oauthData.state !== _this10.storage.get(stateName)) {
               return Promise.reject('OAuth 2.0 state parameter mismatch.');
             }
-            return _this9.exchangeForToken(oauthData, userData, provider);
+            return _this10.exchangeForToken(oauthData, userData, provider);
           });
         };
 
@@ -968,7 +1005,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         OAuth2.prototype.buildQuery = function buildQuery(provider) {
-          var _this10 = this;
+          var _this11 = this;
 
           var query = {};
           var urlParams = ['defaultUrlParams', 'requiredUrlParams', 'optionalUrlParams'];
@@ -979,7 +1016,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
               var paramValue = typeof provider[paramName] === 'function' ? provider[paramName]() : provider[camelizedName];
 
               if (paramName === 'state') {
-                paramValue = encodeURIComponent(_this10.storage.get(provider.name + '_state'));
+                paramValue = encodeURIComponent(_this11.storage.get(provider.name + '_state'));
               }
 
               if (paramName === 'scope' && Array.isArray(paramValue)) {
@@ -1024,7 +1061,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         return OAuth2;
-      }()) || _class6));
+      }()) || _class5));
 
       _export("OAuth2", OAuth2);
 
@@ -1034,7 +1071,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         });
       };
 
-      _export("Authentication", Authentication = (_dec6 = inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock), _dec7 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.' }), _dec10 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.' }), _dec11 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.' }), _dec12 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec6(_class7 = (_class8 = function () {
+      _export("Authentication", Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2, AuthLock), _dec6 = deprecated({ message: 'Use baseConfig.loginRoute instead.' }), _dec7 = deprecated({ message: 'Use baseConfig.loginRedirect instead.' }), _dec8 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.loginUrl) instead.' }), _dec9 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.signupUrl) instead.' }), _dec10 = deprecated({ message: 'Use baseConfig.joinBase(baseConfig.profileUrl) instead.' }), _dec11 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec5(_class6 = (_class7 = function () {
         function Authentication(storage, config, oAuth1, oAuth2, auth0Lock) {
           
 
@@ -1210,10 +1247,10 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         Authentication.prototype.toUpdateTokenCallstack = function toUpdateTokenCallstack() {
-          var _this11 = this;
+          var _this12 = this;
 
           return new Promise(function (resolve) {
-            return _this11.updateTokenCallstack.push(resolve);
+            return _this12.updateTokenCallstack.push(resolve);
           });
         };
 
@@ -1292,16 +1329,16 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }]);
 
         return Authentication;
-      }(), (_applyDecoratedDescriptor(_class8.prototype, "getLoginRoute", [_dec7], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginRoute"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getLoginRedirect", [_dec8], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginRedirect"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getLoginUrl", [_dec9], Object.getOwnPropertyDescriptor(_class8.prototype, "getLoginUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getSignupUrl", [_dec10], Object.getOwnPropertyDescriptor(_class8.prototype, "getSignupUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getProfileUrl", [_dec11], Object.getOwnPropertyDescriptor(_class8.prototype, "getProfileUrl"), _class8.prototype), _applyDecoratedDescriptor(_class8.prototype, "getToken", [_dec12], Object.getOwnPropertyDescriptor(_class8.prototype, "getToken"), _class8.prototype)), _class8)) || _class7));
+      }(), (_applyDecoratedDescriptor(_class7.prototype, "getLoginRoute", [_dec6], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginRoute"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getLoginRedirect", [_dec7], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginRedirect"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getLoginUrl", [_dec8], Object.getOwnPropertyDescriptor(_class7.prototype, "getLoginUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getSignupUrl", [_dec9], Object.getOwnPropertyDescriptor(_class7.prototype, "getSignupUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getProfileUrl", [_dec10], Object.getOwnPropertyDescriptor(_class7.prototype, "getProfileUrl"), _class7.prototype), _applyDecoratedDescriptor(_class7.prototype, "getToken", [_dec11], Object.getOwnPropertyDescriptor(_class7.prototype, "getToken"), _class7.prototype)), _class7)) || _class6));
 
       _export("Authentication", Authentication);
 
       AuthType = { COGNITO: "cognito", REGULAR: "regular" };
       AuthTypeSorageKey = "auth-type";
 
-      _export("AuthService", AuthService = (_dec13 = inject(Authentication, CognitoAuth, BaseConfig, BindingSignaler, EventAggregator), _dec14 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec13(_class9 = (_class10 = function () {
-        function AuthService(authentication, cognitoAuth, config, bindingSignaler, eventAggregator) {
-          var _this12 = this;
+      _export("AuthService", AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSignaler, EventAggregator), _dec13 = deprecated({ message: 'Use .getAccessToken() instead.' }), _dec12(_class8 = (_class9 = function () {
+        function AuthService(authentication, config, bindingSignaler, eventAggregator) {
+          var _this13 = this;
 
           
 
@@ -1309,29 +1346,32 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           this.timeoutID = 0;
 
           this.storageEventHandler = function (event) {
-            if (event.key !== _this12.config.storageKey) {
+            if (event.key !== _this13.config.storageKey) {
               return;
             }
 
             LogManager.getLogger('authentication').info('Stored token changed event');
 
             if (event.newValue) {
-              _this12.authentication.storage.set(_this12.config.storageKey, event.newValue);
+              _this13.authentication.storage.set(_this13.config.storageKey, event.newValue);
             } else {
-              _this12.authentication.storage.remove(_this12.config.storageKey);
+              _this13.authentication.storage.remove(_this13.config.storageKey);
             }
 
-            var wasAuthenticated = _this12.authenticated;
-            _this12.authentication.responseAnalyzed = false;
-            _this12.updateAuthenticated();
+            var wasAuthenticated = _this13.authenticated;
+            _this13.authentication.responseAnalyzed = false;
+            _this13.updateAuthenticated();
 
-            if (_this12.config.storageChangedRedirect && wasAuthenticated !== _this12.authenticated) {
-              PLATFORM.location.assign(_this12.config.storageChangedRedirect);
+            if (_this13.config.storageChangedRedirect && wasAuthenticated !== _this13.authenticated) {
+              PLATFORM.location.assign(_this13.config.storageChangedRedirect);
             }
           };
 
           this.authentication = authentication;
-          this.cognitoAuth = cognitoAuth;
+          if (config.providers.cognito) {
+            this.cognitoAuth = new CognitoAuth(config);
+          }
+
           this.config = config;
           this.bindingSignaler = bindingSignaler;
           this.eventAggregator = eventAggregator;
@@ -1353,21 +1393,21 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }
 
         AuthService.prototype.setTimeout = function setTimeout(ttl) {
-          var _this13 = this;
+          var _this14 = this;
 
           this.clearTimeout();
 
           this.timeoutID = PLATFORM.global.setTimeout(function () {
-            if (_this13.config.autoUpdateToken && _this13.authentication.getAccessToken() && _this13.authentication.getRefreshToken()) {
-              _this13.updateToken();
+            if (_this14.config.autoUpdateToken && _this14.authentication.getAccessToken() && _this14.authentication.getRefreshToken()) {
+              _this14.updateToken();
 
               return;
             }
 
-            _this13.setResponseObject(null);
+            _this14.setResponseObject(null);
 
-            if (_this13.config.expiredRedirect) {
-              PLATFORM.location.assign(_this13.config.expiredRedirect);
+            if (_this14.config.expiredRedirect) {
+              PLATFORM.location.assign(_this14.config.expiredRedirect);
             }
           }, ttl);
         };
@@ -1472,13 +1512,13 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         AuthService.prototype.updateToken = function updateToken() {
-          var _this14 = this;
+          var _this15 = this;
 
           var authType = this.getLastAuthType();
 
           if (authType === AuthType.COGNITO) {
             return this.cognitoAuth.getSession().then(function (response) {
-              return _this14.setResponseObject(response, true);
+              return _this15.setResponseObject(response, true);
             });
           }
 
@@ -1495,11 +1535,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             content[this.config.refreshTokenSubmitProp] = this.authentication.getRefreshToken();
 
             this.client.post(this.config.joinBase(this.config.refreshTokenUrl ? this.config.refreshTokenUrl : this.config.loginUrl), content).then(function (response) {
-              _this14.setResponseObject(response);
-              _this14.authentication.resolveUpdateTokenCallstack(_this14.isAuthenticated());
+              _this15.setResponseObject(response);
+              _this15.authentication.resolveUpdateTokenCallstack(_this15.isAuthenticated());
             }).catch(function (err) {
-              _this14.setResponseObject(null);
-              _this14.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
+              _this15.setResponseObject(null);
+              _this15.authentication.resolveUpdateTokenCallstack(Promise.reject(err));
             });
           }
 
@@ -1507,7 +1547,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         AuthService.prototype.signup = function signup(displayNameOrCredentials, emailOrOptions, passwordOrRedirectUri, options, redirectUri) {
-          var _this15 = this;
+          var _this16 = this;
 
           var content = void 0;
 
@@ -1523,29 +1563,29 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             };
           }
           return this.client.post(this.config.joinBase(this.config.signupUrl), content, options).then(function (response) {
-            if (_this15.config.loginOnSignup) {
-              _this15.setResponseObject(response);
+            if (_this16.config.loginOnSignup) {
+              _this16.setResponseObject(response);
             }
-            _this15.authentication.redirect(redirectUri, _this15.config.signupRedirect);
+            _this16.authentication.redirect(redirectUri, _this16.config.signupRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.cognitoSignUp = function cognitoSignUp(username, password, userAttributes, redirectUri) {
-          var _this16 = this;
+          var _this17 = this;
 
           return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
-            if (_this16.config.loginOnSignup) {
-              _this16.setResponseObject(response, true);
+            if (_this17.config.loginOnSignup) {
+              _this17.setResponseObject(response, true);
             }
-            _this16.authentication.redirect(redirectUri, _this16.config.signupRedirect);
+            _this17.authentication.redirect(redirectUri, _this17.config.signupRedirect);
             return response;
           });
         };
 
         AuthService.prototype.login = function login(emailOrCredentials, passwordOrOptions, optionsOrRedirectUri, redirectUri) {
-          var _this17 = this;
+          var _this18 = this;
 
           var content = void 0;
 
@@ -1566,35 +1606,35 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           }
 
           return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri).then(function (response) {
-            _this17.setResponseObject(response, false);
+            _this18.setResponseObject(response, false);
 
-            _this17.authentication.redirect(redirectUri, _this17.config.loginRedirect);
+            _this18.authentication.redirect(redirectUri, _this18.config.loginRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.cognitoLogin = function cognitoLogin(username, password, optionsOrRedirectUri, redirectUri) {
-          var _this18 = this;
+          var _this19 = this;
 
           return this.cognitoAuth.loginUser(username, password).then(function (response) {
-            _this18.setResponseObject(response, true);
-            _this18.authentication.redirect(redirectUri, _this18.config.loginRedirect);
+            _this19.setResponseObject(response, true);
+            _this19.authentication.redirect(redirectUri, _this19.config.loginRedirect);
             return response;
           });
         };
 
         AuthService.prototype.logout = function logout(redirectUri, query, name) {
-          var _this19 = this;
+          var _this20 = this;
 
           var localLogout = function localLogout(response) {
             return new Promise(function (resolve) {
-              _this19.setResponseObject(null);
+              _this20.setResponseObject(null);
 
-              _this19.authentication.redirect(redirectUri, _this19.config.logoutRedirect, query);
+              _this20.authentication.redirect(redirectUri, _this20.config.logoutRedirect, query);
 
-              if (typeof _this19.onLogout === 'function') {
-                _this19.onLogout(response);
+              if (typeof _this20.onLogout === 'function') {
+                _this20.onLogout(response);
               }
               resolve(response);
             });
@@ -1603,7 +1643,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           if (name) {
             if (this.config.providers[name].logoutEndpoint) {
               return this.authentication.logout(name).then(function (logoutResponse) {
-                var stateValue = _this19.authentication.storage.get(name + '_state');
+                var stateValue = _this20.authentication.storage.get(name + '_state');
                 if (logoutResponse.state !== stateValue) {
                   return Promise.reject('OAuth2 response state value differs');
                 }
@@ -1616,27 +1656,27 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         AuthService.prototype.authenticate = function authenticate(name, redirectUri) {
-          var _this20 = this;
+          var _this21 = this;
 
           var userData = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
           this.eventAggregator.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
           return this.authentication.authenticate(name, userData).then(function (response) {
-            _this20.setResponseObject(response);
-            _this20.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
+            _this21.setResponseObject(response);
+            _this21.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
 
-            _this20.authentication.redirect(redirectUri, _this20.config.loginRedirect);
+            _this21.authentication.redirect(redirectUri, _this21.config.loginRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.unlink = function unlink(name, redirectUri) {
-          var _this21 = this;
+          var _this22 = this;
 
           var unlinkUrl = this.config.joinBase(this.config.unlinkUrl) + name;
           return this.client.request(this.config.unlinkMethod, unlinkUrl).then(function (response) {
-            _this21.authentication.redirect(redirectUri);
+            _this22.authentication.redirect(redirectUri);
 
             return response;
           });
@@ -1656,11 +1696,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }]);
 
         return AuthService;
-      }(), (_applyDecoratedDescriptor(_class10.prototype, "getCurrentToken", [_dec14], Object.getOwnPropertyDescriptor(_class10.prototype, "getCurrentToken"), _class10.prototype)), _class10)) || _class9));
+      }(), (_applyDecoratedDescriptor(_class9.prototype, "getCurrentToken", [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, "getCurrentToken"), _class9.prototype)), _class9)) || _class8));
 
       _export("AuthService", AuthService);
 
-      _export("AuthenticateStep", AuthenticateStep = (_dec15 = inject(AuthService), _dec15(_class12 = function () {
+      _export("AuthenticateStep", AuthenticateStep = (_dec14 = inject(AuthService), _dec14(_class11 = function () {
         function AuthenticateStep(authService) {
           
 
@@ -1687,11 +1727,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         return AuthenticateStep;
-      }()) || _class12));
+      }()) || _class11));
 
       _export("AuthenticateStep", AuthenticateStep);
 
-      _export("AuthorizeStep", AuthorizeStep = (_dec16 = inject(AuthService), _dec16(_class13 = function () {
+      _export("AuthorizeStep", AuthorizeStep = (_dec15 = inject(AuthService), _dec15(_class12 = function () {
         function AuthorizeStep(authService) {
           
 
@@ -1720,11 +1760,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         return AuthorizeStep;
-      }()) || _class13));
+      }()) || _class12));
 
       _export("AuthorizeStep", AuthorizeStep);
 
-      _export("FetchConfig", FetchConfig = (_dec17 = inject(HttpClient, Config, AuthService, BaseConfig), _dec17(_class14 = function () {
+      _export("FetchConfig", FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseConfig), _dec16(_class13 = function () {
         function FetchConfig(httpClient, clientConfig, authService, config) {
           
 
@@ -1735,13 +1775,13 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }
 
         FetchConfig.prototype.configure = function configure(client) {
-          var _this22 = this;
+          var _this23 = this;
 
           if (Array.isArray(client)) {
             var _ret = function () {
               var configuredClients = [];
               client.forEach(function (toConfigure) {
-                configuredClients.push(_this22.configure(toConfigure));
+                configuredClients.push(_this23.configure(toConfigure));
               });
 
               return {
@@ -1772,20 +1812,20 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         _createClass(FetchConfig, [{
           key: "interceptor",
           get: function get() {
-            var _this23 = this;
+            var _this24 = this;
 
             return {
               request: function request(_request) {
-                if (!_this23.config.httpInterceptor || !_this23.authService.isAuthenticated()) {
+                if (!_this24.config.httpInterceptor || !_this24.authService.isAuthenticated()) {
                   return _request;
                 }
-                var token = _this23.authService.getAccessToken();
+                var token = _this24.authService.getAccessToken();
 
-                if (_this23.config.authTokenType) {
-                  token = _this23.config.authTokenType + " " + token;
+                if (_this24.config.authTokenType) {
+                  token = _this24.config.authTokenType + " " + token;
                 }
 
-                _request.headers.set(_this23.config.authHeader, token);
+                _request.headers.set(_this24.config.authHeader, token);
 
                 return _request;
               },
@@ -1797,23 +1837,23 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
                   if (_response.status !== 401) {
                     return resolve(_response);
                   }
-                  if (!_this23.config.httpInterceptor || !_this23.authService.isTokenExpired()) {
+                  if (!_this24.config.httpInterceptor || !_this24.authService.isTokenExpired()) {
                     return resolve(_response);
                   }
-                  if (!_this23.config.useRefreshToken || !_this23.authService.getRefreshToken()) {
+                  if (!_this24.config.useRefreshToken || !_this24.authService.getRefreshToken()) {
                     return resolve(_response);
                   }
 
-                  return _this23.authService.updateToken().then(function () {
-                    var token = _this23.authService.getAccessToken();
+                  return _this24.authService.updateToken().then(function () {
+                    var token = _this24.authService.getAccessToken();
 
-                    if (_this23.config.authTokenType) {
-                      token = _this23.config.authTokenType + " " + token;
+                    if (_this24.config.authTokenType) {
+                      token = _this24.config.authTokenType + " " + token;
                     }
 
-                    request.headers.set(_this23.config.authHeader, token);
+                    request.headers.set(_this24.config.authHeader, token);
 
-                    return _this23.client.fetch(request).then(resolve);
+                    return _this24.client.fetch(request).then(resolve);
                   });
                 });
               }
@@ -1822,7 +1862,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }]);
 
         return FetchConfig;
-      }()) || _class14));
+      }()) || _class13));
 
       _export("FetchConfig", FetchConfig);
     }

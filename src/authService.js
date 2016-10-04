@@ -12,7 +12,7 @@ import {BaseConfig} from './baseConfig';
 const AuthType = {COGNITO:"cognito", REGULAR:"regular"};
 const AuthTypeSorageKey = "auth-type";
 
-@inject(Authentication, CognitoAuth,BaseConfig, BindingSignaler, EventAggregator)
+@inject(Authentication,BaseConfig, BindingSignaler, EventAggregator)
 export class AuthService {
   /**
    * The Authentication instance that handles the token
@@ -50,9 +50,12 @@ export class AuthService {
    * @param  {BindingSignaler} bindingSignaler The BindingSignaler instance to be used
    * @param  {EventAggregator} eventAggregator The EventAggregator instance to be used
    */
-  constructor(authentication, cognitoAuth, config,  bindingSignaler, eventAggregator) {
+  constructor(authentication, config,  bindingSignaler, eventAggregator) {
     this.authentication  = authentication;
-    this.cognitoAuth = cognitoAuth;
+    if(config.providers.cognito){
+      this.cognitoAuth = new CognitoAuth(config);
+    }
+
     this.config          = config;
     this.bindingSignaler = bindingSignaler;
     this.eventAggregator = eventAggregator;
