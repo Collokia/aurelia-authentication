@@ -325,19 +325,32 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           this.userPoolId = config.providers.cognito.userPoolId;
           this.appClientId = config.providers.cognito.appClientId;
 
-          AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-
           this.poolData = {
             UserPoolId: this.userPoolId,
             ClientId: this.appClientId
           };
 
-          this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+          this._initialized = false;
+          this.initialise();
         }
+
+        CognitoAuth.prototype.initialise = function initialise() {
+          try {
+            if (!this._initialized) {
+              AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+              this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+            }
+            this._initialized = true;
+            console.log("CognitoAuth initialized");
+          } catch (e) {
+            console.log("Error initializing CognitoAuth");
+          }
+        };
 
         CognitoAuth.prototype.registerUser = function registerUser(username, password, userAttributes) {
           var _this3 = this;
 
+          this.initialise();
           var attributes = [];
 
           attributes = userAttributes.map(function (it) {
@@ -356,6 +369,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         CognitoAuth.prototype.confirmUser = function confirmUser(username, code) {
+          this.initialise();
           var userData = {
             Username: username,
             Pool: this.userPool
@@ -414,7 +428,6 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           normalizedResponse.otherPossibleAccounts = null;
           normalizedResponse.originalData = null;
           normalizedResponse.oauth_token = response.accessToken.jwtToken;
-          console.log("_normalizeCognitoResponse", normalizedResponse);
           return normalizedResponse;
         };
 
@@ -428,13 +441,13 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           normalizedResponse.otherPossibleAccounts = null;
           normalizedResponse.originalData = null;
           normalizedResponse.oauth_token = null;
-          console.log("_normalizeCognitoResponseError", normalizedResponse);
           return normalizedResponse;
         };
 
         CognitoAuth.prototype.getSession = function getSession() {
           var _this5 = this;
 
+          this.initialise();
           var cognitoUser = this.userPool.getCurrentUser();
           return new Promise(function (resolve, reject) {
             if (cognitoUser != null) {
@@ -454,6 +467,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         CognitoAuth.prototype.logoutUser = function logoutUser() {
+          this.initialise();
           var cognitoUser = this.userPool.getCurrentUser();
           if (cognitoUser != null) {
             cognitoUser.signOut();

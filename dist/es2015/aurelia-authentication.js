@@ -169,17 +169,30 @@ export let CognitoAuth = class CognitoAuth {
     this.userPoolId = config.providers.cognito.userPoolId;
     this.appClientId = config.providers.cognito.appClientId;
 
-    AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-
     this.poolData = {
       UserPoolId: this.userPoolId,
       ClientId: this.appClientId
     };
 
-    this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+    this._initialized = false;
+    this.initialise();
+  }
+
+  initialise() {
+    try {
+      if (!this._initialized) {
+        AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+      }
+      this._initialized = true;
+      console.log("CognitoAuth initialized");
+    } catch (e) {
+      console.log("Error initializing CognitoAuth");
+    }
   }
 
   registerUser(username, password, userAttributes) {
+    this.initialise();
     let attributes = [];
 
     attributes = userAttributes.map(it => new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it));
@@ -196,6 +209,7 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   confirmUser(username, code) {
+    this.initialise();
     let userData = {
       Username: username,
       Pool: this.userPool
@@ -248,7 +262,6 @@ export let CognitoAuth = class CognitoAuth {
     normalizedResponse.otherPossibleAccounts = null;
     normalizedResponse.originalData = null;
     normalizedResponse.oauth_token = response.accessToken.jwtToken;
-    console.log("_normalizeCognitoResponse", normalizedResponse);
     return normalizedResponse;
   }
 
@@ -262,11 +275,11 @@ export let CognitoAuth = class CognitoAuth {
     normalizedResponse.otherPossibleAccounts = null;
     normalizedResponse.originalData = null;
     normalizedResponse.oauth_token = null;
-    console.log("_normalizeCognitoResponseError", normalizedResponse);
     return normalizedResponse;
   }
 
   getSession() {
+    this.initialise();
     let cognitoUser = this.userPool.getCurrentUser();
     return new Promise((resolve, reject) => {
       if (cognitoUser != null) {
@@ -286,6 +299,7 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   logoutUser() {
+    this.initialise();
     let cognitoUser = this.userPool.getCurrentUser();
     if (cognitoUser != null) {
       cognitoUser.signOut();
