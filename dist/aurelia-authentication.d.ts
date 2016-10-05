@@ -17,7 +17,6 @@ export declare class Popup {
 }
 export declare class CognitoAuth {
   constructor(config?: any);
-  initialise(): any;
   registerUser(username?: any, password?: any, userAttributes?: any): any;
   confirmUser(username?: any, code?: any): any;
   loginUser(username?: any, password?: any): any;

@@ -14,26 +14,20 @@ export class CognitoAuth {
       };
 
       this._initialized = false;
-      this.initialise();
-  }
-
-  initialise(){
-    try{
-      if(!this._initialized){
-        AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
-        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+      try{
+        if(!this._initialized){
+          AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
+          this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+        }
+        this._initialized = true;
+        console.log("CognitoAuth initialized")
+      } catch(e){
+        console.log("Error initializing CognitoAuth")
       }
-      this._initialized = true;
-      console.log("CognitoAuth initialized")
-    } catch(e){
-      console.log("Error initializing CognitoAuth")
-    }
-
   }
 
 
   registerUser(username, password, userAttributes) {
-    this.initialise();
     let attributes = [];
 
     // let emailData = {
@@ -55,7 +49,6 @@ export class CognitoAuth {
   }
 
   confirmUser(username, code) {
-    this.initialise();
     let userData = {
       Username: username,
       Pool: this.userPool
@@ -75,7 +68,6 @@ export class CognitoAuth {
   }
 
   loginUser(username, password) {
-    this.initialise();
     let authData = {
       Username: username,
       Password: password
@@ -126,7 +118,6 @@ export class CognitoAuth {
   }
 
   getSession() {
-    this.initialise();
     let cognitoUser = this.userPool.getCurrentUser();
     return new Promise((resolve, reject)=> {
       if (cognitoUser != null) {
@@ -147,7 +138,6 @@ export class CognitoAuth {
   }
 
   logoutUser() {
-    this.initialise();
     let cognitoUser = this.userPool.getCurrentUser();
     if (cognitoUser != null){
       cognitoUser.signOut();

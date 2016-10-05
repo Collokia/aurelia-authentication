@@ -175,10 +175,6 @@ export let CognitoAuth = class CognitoAuth {
     };
 
     this._initialized = false;
-    this.initialise();
-  }
-
-  initialise() {
     try {
       if (!this._initialized) {
         AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
@@ -192,7 +188,6 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   registerUser(username, password, userAttributes) {
-    this.initialise();
     let attributes = [];
 
     attributes = userAttributes.map(it => new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it));
@@ -209,7 +204,6 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   confirmUser(username, code) {
-    this.initialise();
     let userData = {
       Username: username,
       Pool: this.userPool
@@ -229,7 +223,6 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   loginUser(username, password) {
-    this.initialise();
     let authData = {
       Username: username,
       Password: password
@@ -280,7 +273,6 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   getSession() {
-    this.initialise();
     let cognitoUser = this.userPool.getCurrentUser();
     return new Promise((resolve, reject) => {
       if (cognitoUser != null) {
@@ -300,7 +292,6 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   logoutUser() {
-    this.initialise();
     let cognitoUser = this.userPool.getCurrentUser();
     if (cognitoUser != null) {
       cognitoUser.signOut();

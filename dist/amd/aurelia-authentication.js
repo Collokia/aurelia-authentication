@@ -258,10 +258,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
       };
 
       this._initialized = false;
-      this.initialise();
-    }
-
-    CognitoAuth.prototype.initialise = function initialise() {
       try {
         if (!this._initialized) {
           AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
@@ -272,12 +268,11 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
       } catch (e) {
         console.log("Error initializing CognitoAuth");
       }
-    };
+    }
 
     CognitoAuth.prototype.registerUser = function registerUser(username, password, userAttributes) {
       var _this3 = this;
 
-      this.initialise();
       var attributes = [];
 
       attributes = userAttributes.map(function (it) {
@@ -296,7 +291,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     };
 
     CognitoAuth.prototype.confirmUser = function confirmUser(username, code) {
-      this.initialise();
       var userData = {
         Username: username,
         Pool: this.userPool
@@ -318,7 +312,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     CognitoAuth.prototype.loginUser = function loginUser(username, password) {
       var _this4 = this;
 
-      this.initialise();
       var authData = {
         Username: username,
         Password: password
@@ -375,7 +368,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     CognitoAuth.prototype.getSession = function getSession() {
       var _this5 = this;
 
-      this.initialise();
       var cognitoUser = this.userPool.getCurrentUser();
       return new Promise(function (resolve, reject) {
         if (cognitoUser != null) {
@@ -395,7 +387,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     };
 
     CognitoAuth.prototype.logoutUser = function logoutUser() {
-      this.initialise();
       var cognitoUser = this.userPool.getCurrentUser();
       if (cognitoUser != null) {
         cognitoUser.signOut();
