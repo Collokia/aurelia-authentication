@@ -49,7 +49,9 @@ var _aureliaFetchClient = require("aurelia-fetch-client");
 
 var _aureliaApi = require("aurelia-api");
 
-var _amazonCognitoIdentity = require("amazon-cognito-identity-js/dist/amazon-cognito-identity.min");
+require("amazon-cognito-identity-js/dist/aws-cognito-sdk.min");
+
+require("amazon-cognito-identity-js/dist/amazon-cognito-identity.min");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -221,7 +223,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
     
 
     this.config = config;
-    _amazonCognitoIdentity.AWSCognito.config.region = config.providers.cognito.region;
+    AWSCognito.config.region = config.providers.cognito.region;
     this.userPoolId = config.providers.cognito.userPoolId;
     this.appClientId = config.providers.cognito.appClientId;
 
@@ -237,8 +239,8 @@ var CognitoAuth = exports.CognitoAuth = function () {
   CognitoAuth.prototype.initialise = function initialise() {
     try {
       if (!this._initialized) {
-        _amazonCognitoIdentity.AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-        this.userPool = new _amazonCognitoIdentity.CognitoUserPool(this.poolData);
+        AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+        this.userPool = new CognitoUserPool(this.poolData);
       }
       this._initialized = true;
       console.log("CognitoAuth initialized");
@@ -254,7 +256,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
     var attributes = [];
 
     attributes = userAttributes.map(function (it) {
-      return new _amazonCognitoIdentity.CognitoUserAttribute(it);
+      return new CognitoUserAttribute(it);
     });
 
     return new Promise(function (resolve, reject) {
@@ -275,7 +277,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
       Pool: this.userPool
     };
 
-    var cognitoUser = new _amazonCognitoIdentity.CognitoUser(userData);
+    var cognitoUser = new CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -297,14 +299,14 @@ var CognitoAuth = exports.CognitoAuth = function () {
       Password: password
     };
 
-    var authDetails = new _amazonCognitoIdentity.AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+    var authDetails = new AuthenticationDetails(authData);
 
     var userData = {
       Username: username,
       Pool: this.userPool
     };
 
-    var cognitoUser = new _amazonCognitoIdentity.CognitoUser(userData);
+    var cognitoUser = new CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.authenticateUser(authDetails, {

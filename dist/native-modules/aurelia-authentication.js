@@ -181,7 +181,8 @@ var parseUrl = function parseUrl(url) {
   return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
 
-import { AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
+import 'amazon-cognito-identity-js/dist/aws-cognito-sdk.min';
+import 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
 
 export var CognitoAuth = function () {
   function CognitoAuth(config) {
@@ -264,7 +265,7 @@ export var CognitoAuth = function () {
       Password: password
     };
 
-    var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+    var authDetails = new AuthenticationDetails(authData);
 
     var userData = {
       Username: username,

@@ -1,4 +1,4 @@
-define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api", "amazon-cognito-identity-js/dist/amazon-cognito-identity.min"], function (exports, _authFilterValueConverter, _authenticatedValueConverter, _authenticatedFilterValueConverter, _extend, _aureliaLogging, _jwtDecode, _aureliaPal, _aureliaPath, _aureliaDependencyInjection, _aureliaEventAggregator, _aureliaMetadata, _aureliaTemplatingResources, _aureliaRouter, _aureliaFetchClient, _aureliaApi, _amazonCognitoIdentity) {
+define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api", "amazon-cognito-identity-js/dist/aws-cognito-sdk.min", "amazon-cognito-identity-js/dist/amazon-cognito-identity.min"], function (exports, _authFilterValueConverter, _authenticatedValueConverter, _authenticatedFilterValueConverter, _extend, _aureliaLogging, _jwtDecode, _aureliaPal, _aureliaPath, _aureliaDependencyInjection, _aureliaEventAggregator, _aureliaMetadata, _aureliaTemplatingResources, _aureliaRouter, _aureliaFetchClient, _aureliaApi) {
   "use strict";
 
   Object.defineProperty(exports, "__esModule", {
@@ -248,7 +248,7 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
       
 
       this.config = config;
-      _amazonCognitoIdentity.AWSCognito.config.region = config.providers.cognito.region;
+      AWSCognito.config.region = config.providers.cognito.region;
       this.userPoolId = config.providers.cognito.userPoolId;
       this.appClientId = config.providers.cognito.appClientId;
 
@@ -264,8 +264,8 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     CognitoAuth.prototype.initialise = function initialise() {
       try {
         if (!this._initialized) {
-          _amazonCognitoIdentity.AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-          this.userPool = new _amazonCognitoIdentity.CognitoUserPool(this.poolData);
+          AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+          this.userPool = new CognitoUserPool(this.poolData);
         }
         this._initialized = true;
         console.log("CognitoAuth initialized");
@@ -281,7 +281,7 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
       var attributes = [];
 
       attributes = userAttributes.map(function (it) {
-        return new _amazonCognitoIdentity.CognitoUserAttribute(it);
+        return new CognitoUserAttribute(it);
       });
 
       return new Promise(function (resolve, reject) {
@@ -302,7 +302,7 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
         Pool: this.userPool
       };
 
-      var cognitoUser = new _amazonCognitoIdentity.CognitoUser(userData);
+      var cognitoUser = new CognitoUser(userData);
 
       return new Promise(function (resolve, reject) {
         cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -324,14 +324,14 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
         Password: password
       };
 
-      var authDetails = new _amazonCognitoIdentity.AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+      var authDetails = new AuthenticationDetails(authData);
 
       var userData = {
         Username: username,
         Pool: this.userPool
       };
 
-      var cognitoUser = new _amazonCognitoIdentity.CognitoUser(userData);
+      var cognitoUser = new CognitoUser(userData);
 
       return new Promise(function (resolve, reject) {
         cognitoUser.authenticateUser(authDetails, {
