@@ -9,8 +9,6 @@ import {Redirect} from 'aurelia-router';
 import {HttpClient} from 'aurelia-fetch-client';
 import {Config,Rest} from 'aurelia-api';
 
-import 'amazon-cognito-identity-js/dist/aws-cognito-sdk.min';
-import 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
 export declare class Popup {
   constructor();
   open(url?: any, windowName?: any, options?: any): any;

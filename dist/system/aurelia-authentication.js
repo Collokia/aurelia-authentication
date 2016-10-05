@@ -1,6 +1,6 @@
 "use strict";
 
-System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api", "amazon-cognito-identity-js/dist/aws-cognito-sdk.min", "amazon-cognito-identity-js/dist/amazon-cognito-identity.min"], function (_export, _context) {
+System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api"], function (_export, _context) {
   "use strict";
 
   var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, CognitoAuth, AuthError, BaseConfig, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
@@ -162,7 +162,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
     }, function (_aureliaApi) {
       Config = _aureliaApi.Config;
       Rest = _aureliaApi.Rest;
-    }, function (_amazonCognitoIdentityJsDistAwsCognitoSdkMin) {}, function (_amazonCognitoIdentityJsDistAmazonCognitoIdentityMin) {}],
+    }],
     execute: function () {
       _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
         return typeof obj;
@@ -338,7 +338,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           try {
             if (!this._initialized) {
               AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-              this.userPool = new CognitoUserPool(this.poolData);
+              this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
             }
             this._initialized = true;
             console.log("CognitoAuth initialized");
@@ -354,7 +354,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           var attributes = [];
 
           attributes = userAttributes.map(function (it) {
-            return new CognitoUserAttribute(it);
+            return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
           });
 
           return new Promise(function (resolve, reject) {
@@ -375,7 +375,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             Pool: this.userPool
           };
 
-          var cognitoUser = new CognitoUser(userData);
+          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
 
           return new Promise(function (resolve, reject) {
             cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -397,14 +397,14 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             Password: password
           };
 
-          var authDetails = new AuthenticationDetails(authData);
+          var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
 
           var userData = {
             Username: username,
             Pool: this.userPool
           };
 
-          var cognitoUser = new CognitoUser(userData);
+          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
 
           return new Promise(function (resolve, reject) {
             cognitoUser.authenticateUser(authDetails, {

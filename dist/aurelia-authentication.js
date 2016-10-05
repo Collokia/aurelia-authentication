@@ -131,9 +131,6 @@ const parseUrl = url => {
   return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
 
-import 'amazon-cognito-identity-js/dist/aws-cognito-sdk.min';
-import 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
-
 export class CognitoAuth {
 
   constructor(config) {
@@ -157,7 +154,7 @@ export class CognitoAuth {
     try{
       if(!this._initialized){
         AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
-        this.userPool = new CognitoUserPool(this.poolData);
+        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
       }
       this._initialized = true;
       console.log("CognitoAuth initialized")
@@ -177,7 +174,7 @@ export class CognitoAuth {
     //   Value: attributes.email
     // };
 
-    attributes = userAttributes.map(it => new CognitoUserAttribute(it));
+    attributes = userAttributes.map(it => new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it));
 
     return new Promise((resolve, reject)=> {
       this.userPool.signUp(username, password, attributes, null, (err, result) => {
@@ -197,7 +194,7 @@ export class CognitoAuth {
       Pool: this.userPool
     };
 
-    let cognitoUser = new CognitoUser(userData);
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
 
     return new Promise((resolve, reject)=> {
       cognitoUser.confirmRegistration(code, true, (err, result) => {
@@ -217,14 +214,14 @@ export class CognitoAuth {
       Password: password
     };
 
-    let authDetails = new AuthenticationDetails(authData);
+    let authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
 
     let userData = {
       Username: username,
       Pool: this.userPool
     };
 
-    let cognitoUser = new CognitoUser(userData);
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
 
     return new Promise((resolve, reject)=> {
       cognitoUser.authenticateUser(authDetails, {

@@ -49,10 +49,6 @@ var _aureliaFetchClient = require("aurelia-fetch-client");
 
 var _aureliaApi = require("aurelia-api");
 
-require("amazon-cognito-identity-js/dist/aws-cognito-sdk.min");
-
-require("amazon-cognito-identity-js/dist/amazon-cognito-identity.min");
-
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
@@ -240,7 +236,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
     try {
       if (!this._initialized) {
         AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-        this.userPool = new CognitoUserPool(this.poolData);
+        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
       }
       this._initialized = true;
       console.log("CognitoAuth initialized");
@@ -256,7 +252,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
     var attributes = [];
 
     attributes = userAttributes.map(function (it) {
-      return new CognitoUserAttribute(it);
+      return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
     });
 
     return new Promise(function (resolve, reject) {
@@ -277,7 +273,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
       Pool: this.userPool
     };
 
-    var cognitoUser = new CognitoUser(userData);
+    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -299,14 +295,14 @@ var CognitoAuth = exports.CognitoAuth = function () {
       Password: password
     };
 
-    var authDetails = new AuthenticationDetails(authData);
+    var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
 
     var userData = {
       Username: username,
       Pool: this.userPool
     };
 
-    var cognitoUser = new CognitoUser(userData);
+    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.authenticateUser(authDetails, {
