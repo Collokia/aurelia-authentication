@@ -1,9 +1,9 @@
 "use strict";
 
-System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api"], function (_export, _context) {
+System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "amazon-cognito-identity-js", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api"], function (_export, _context) {
   "use strict";
 
-  var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, CognitoAuth, AuthError, BaseConfig, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
+  var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, CognitoAuth, AuthError, BaseConfig, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
 
   function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
     var desc = {};
@@ -147,6 +147,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
       parseQueryString = _aureliaPath.parseQueryString;
       join = _aureliaPath.join;
       buildQueryString = _aureliaPath.buildQueryString;
+    }, function (_amazonCognitoIdentityJs) {
+      AWSCognito = _amazonCognitoIdentityJs.AWSCognito;
+      CognitoUserPool = _amazonCognitoIdentityJs.CognitoUserPool;
+      CognitoUserAttribute = _amazonCognitoIdentityJs.CognitoUserAttribute;
+      CognitoUser = _amazonCognitoIdentityJs.CognitoUser;
     }, function (_aureliaDependencyInjection) {
       inject = _aureliaDependencyInjection.inject;
     }, function (_aureliaEventAggregator) {
@@ -338,7 +343,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           try {
             if (!this._initialized) {
               AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-              this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+              this.userPool = new CognitoUserPool(this.poolData);
             }
             this._initialized = true;
             console.log("CognitoAuth initialized");
@@ -354,7 +359,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           var attributes = [];
 
           attributes = userAttributes.map(function (it) {
-            return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
+            return new CognitoUserAttribute(it);
           });
 
           return new Promise(function (resolve, reject) {
@@ -375,7 +380,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             Pool: this.userPool
           };
 
-          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+          var cognitoUser = new CognitoUser(userData);
 
           return new Promise(function (resolve, reject) {
             cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -391,6 +396,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         CognitoAuth.prototype.loginUser = function loginUser(username, password) {
           var _this4 = this;
 
+          this.initialise();
           var authData = {
             Username: username,
             Password: password
@@ -403,7 +409,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
             Pool: this.userPool
           };
 
-          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+          var cognitoUser = new CognitoUser(userData);
 
           return new Promise(function (resolve, reject) {
             cognitoUser.authenticateUser(authDetails, {
@@ -1590,6 +1596,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           var _this17 = this;
 
           return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
+            console.log("register response", response);
             if (_this17.config.loginOnSignup) {
               _this17.setResponseObject(response, true);
             }

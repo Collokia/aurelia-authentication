@@ -35,6 +35,8 @@ var _aureliaPal = require("aurelia-pal");
 
 var _aureliaPath = require("aurelia-path");
 
+var _amazonCognitoIdentityJs = require("amazon-cognito-identity-js");
+
 var _aureliaDependencyInjection = require("aurelia-dependency-injection");
 
 var _aureliaEventAggregator = require("aurelia-event-aggregator");
@@ -219,7 +221,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
     
 
     this.config = config;
-    AWSCognito.config.region = config.providers.cognito.region;
+    _amazonCognitoIdentityJs.AWSCognito.config.region = config.providers.cognito.region;
     this.userPoolId = config.providers.cognito.userPoolId;
     this.appClientId = config.providers.cognito.appClientId;
 
@@ -235,8 +237,8 @@ var CognitoAuth = exports.CognitoAuth = function () {
   CognitoAuth.prototype.initialise = function initialise() {
     try {
       if (!this._initialized) {
-        AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+        _amazonCognitoIdentityJs.AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
+        this.userPool = new _amazonCognitoIdentityJs.CognitoUserPool(this.poolData);
       }
       this._initialized = true;
       console.log("CognitoAuth initialized");
@@ -252,7 +254,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
     var attributes = [];
 
     attributes = userAttributes.map(function (it) {
-      return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
+      return new _amazonCognitoIdentityJs.CognitoUserAttribute(it);
     });
 
     return new Promise(function (resolve, reject) {
@@ -273,7 +275,7 @@ var CognitoAuth = exports.CognitoAuth = function () {
       Pool: this.userPool
     };
 
-    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    var cognitoUser = new _amazonCognitoIdentityJs.CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -289,19 +291,20 @@ var CognitoAuth = exports.CognitoAuth = function () {
   CognitoAuth.prototype.loginUser = function loginUser(username, password) {
     var _this4 = this;
 
+    this.initialise();
     var authData = {
       Username: username,
       Password: password
     };
 
-    var authDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
+    var authDetails = new _amazonCognitoIdentityJs.AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authData);
 
     var userData = {
       Username: username,
       Pool: this.userPool
     };
 
-    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    var cognitoUser = new _amazonCognitoIdentityJs.CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.authenticateUser(authDetails, {
@@ -1476,6 +1479,7 @@ var AuthService = exports.AuthService = (_dec12 = (0, _aureliaDependencyInjectio
     var _this17 = this;
 
     return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
+      console.log("register response", response);
       if (_this17.config.loginOnSignup) {
         _this17.setResponseObject(response, true);
       }

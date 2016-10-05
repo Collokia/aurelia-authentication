@@ -47,6 +47,7 @@ import * as LogManager from 'aurelia-logging';
 import jwtDecode from 'jwt-decode';
 import { PLATFORM, DOM } from 'aurelia-pal';
 import { parseQueryString, join, buildQueryString } from 'aurelia-path';
+import { AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js';
 import { inject } from 'aurelia-dependency-injection';
 import { EventAggregator } from 'aurelia-event-aggregator';
 import { deprecated } from 'aurelia-metadata';
@@ -203,7 +204,7 @@ export var CognitoAuth = function () {
     try {
       if (!this._initialized) {
         AWSCognito.config.update({ accessKeyId: 'mock', secretAccessKey: 'mock' });
-        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+        this.userPool = new CognitoUserPool(this.poolData);
       }
       this._initialized = true;
       console.log("CognitoAuth initialized");
@@ -219,7 +220,7 @@ export var CognitoAuth = function () {
     var attributes = [];
 
     attributes = userAttributes.map(function (it) {
-      return new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it);
+      return new CognitoUserAttribute(it);
     });
 
     return new Promise(function (resolve, reject) {
@@ -240,7 +241,7 @@ export var CognitoAuth = function () {
       Pool: this.userPool
     };
 
-    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    var cognitoUser = new CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.confirmRegistration(code, true, function (err, result) {
@@ -256,6 +257,7 @@ export var CognitoAuth = function () {
   CognitoAuth.prototype.loginUser = function loginUser(username, password) {
     var _this4 = this;
 
+    this.initialise();
     var authData = {
       Username: username,
       Password: password
@@ -268,7 +270,7 @@ export var CognitoAuth = function () {
       Pool: this.userPool
     };
 
-    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    var cognitoUser = new CognitoUser(userData);
 
     return new Promise(function (resolve, reject) {
       cognitoUser.authenticateUser(authDetails, {
@@ -1443,6 +1445,7 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     var _this17 = this;
 
     return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
+      console.log("register response", response);
       if (_this17.config.loginOnSignup) {
         _this17.setResponseObject(response, true);
       }

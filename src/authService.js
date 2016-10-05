@@ -406,6 +406,7 @@ export class AuthService {
   cognitoSignUp(username,password, userAttributes, redirectUri){
     return this.cognitoAuth.registerUser(username,password, userAttributes)
       .then(response => {
+        console.log("register response", response);
       if (this.config.loginOnSignup) {
         this.setResponseObject(response, true);
       }

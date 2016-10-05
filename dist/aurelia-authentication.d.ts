@@ -1,6 +1,7 @@
 import * as LogManager from 'aurelia-logging';
 import {PLATFORM,DOM} from 'aurelia-pal';
 import {parseQueryString,join,buildQueryString} from 'aurelia-path';
+import {AWSCognito,CognitoUserPool,CognitoUserAttribute,CognitoUser} from 'amazon-cognito-identity-js';
 import {inject} from 'aurelia-dependency-injection';
 import {EventAggregator} from 'aurelia-event-aggregator';
 import {deprecated} from 'aurelia-metadata';

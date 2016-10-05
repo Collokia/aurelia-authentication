@@ -1,3 +1,5 @@
+import {AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js';
+
 export class CognitoAuth {
 
   constructor(config) {
@@ -21,7 +23,7 @@ export class CognitoAuth {
     try{
       if(!this._initialized){
         AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
-        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
+        this.userPool = new CognitoUserPool(this.poolData);
       }
       this._initialized = true;
       console.log("CognitoAuth initialized")
@@ -41,7 +43,7 @@ export class CognitoAuth {
     //   Value: attributes.email
     // };
 
-    attributes = userAttributes.map(it => new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute(it));
+    attributes = userAttributes.map(it => new CognitoUserAttribute(it));
 
     return new Promise((resolve, reject)=> {
       this.userPool.signUp(username, password, attributes, null, (err, result) => {
@@ -61,7 +63,7 @@ export class CognitoAuth {
       Pool: this.userPool
     };
 
-    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    let cognitoUser = new CognitoUser(userData);
 
     return new Promise((resolve, reject)=> {
       cognitoUser.confirmRegistration(code, true, (err, result) => {
@@ -75,6 +77,7 @@ export class CognitoAuth {
   }
 
   loginUser(username, password) {
+    this.initialise();
     let authData = {
       Username: username,
       Password: password
@@ -87,7 +90,7 @@ export class CognitoAuth {
       Pool: this.userPool
     };
 
-    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    let cognitoUser = new CognitoUser(userData);
 
     return new Promise((resolve, reject)=> {
       cognitoUser.authenticateUser(authDetails, {
