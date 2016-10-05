@@ -1,4 +1,4 @@
-import {AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js';
+import {AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
 
 export class CognitoAuth {
 

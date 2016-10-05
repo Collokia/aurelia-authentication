@@ -1,9 +1,9 @@
 "use strict";
 
-System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "amazon-cognito-identity-js", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api"], function (_export, _context) {
+System.register(["./authFilterValueConverter", "./authenticatedValueConverter", "./authenticatedFilterValueConverter", "extend", "aurelia-logging", "jwt-decode", "aurelia-pal", "aurelia-path", "aurelia-dependency-injection", "aurelia-event-aggregator", "aurelia-metadata", "aurelia-templating-resources", "aurelia-router", "aurelia-fetch-client", "aurelia-api", "amazon-cognito-identity-js/dist/amazon-cognito-identity.min"], function (_export, _context) {
   "use strict";
 
-  var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, CognitoAuth, AuthError, BaseConfig, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
+  var AuthFilterValueConverter, AuthenticatedValueConverter, AuthenticatedFilterValueConverter, extend, LogManager, jwtDecode, PLATFORM, DOM, parseQueryString, join, buildQueryString, inject, EventAggregator, deprecated, BindingSignaler, Redirect, HttpClient, Config, Rest, AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser, _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13, _typeof, _createClass, Popup, buildPopupWindowOptions, parseUrl, CognitoAuth, AuthError, BaseConfig, Storage, AuthLock, OAuth1, OAuth2, camelCase, Authentication, AuthType, AuthTypeSorageKey, AuthService, AuthenticateStep, AuthorizeStep, FetchConfig;
 
   function _applyDecoratedDescriptor(target, property, decorators, descriptor, context) {
     var desc = {};
@@ -147,11 +147,6 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
       parseQueryString = _aureliaPath.parseQueryString;
       join = _aureliaPath.join;
       buildQueryString = _aureliaPath.buildQueryString;
-    }, function (_amazonCognitoIdentityJs) {
-      AWSCognito = _amazonCognitoIdentityJs.AWSCognito;
-      CognitoUserPool = _amazonCognitoIdentityJs.CognitoUserPool;
-      CognitoUserAttribute = _amazonCognitoIdentityJs.CognitoUserAttribute;
-      CognitoUser = _amazonCognitoIdentityJs.CognitoUser;
     }, function (_aureliaDependencyInjection) {
       inject = _aureliaDependencyInjection.inject;
     }, function (_aureliaEventAggregator) {
@@ -167,6 +162,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
     }, function (_aureliaApi) {
       Config = _aureliaApi.Config;
       Rest = _aureliaApi.Rest;
+    }, function (_amazonCognitoIdentityJsDistAmazonCognitoIdentityMin) {
+      AWSCognito = _amazonCognitoIdentityJsDistAmazonCognitoIdentityMin.AWSCognito;
+      CognitoUserPool = _amazonCognitoIdentityJsDistAmazonCognitoIdentityMin.CognitoUserPool;
+      CognitoUserAttribute = _amazonCognitoIdentityJsDistAmazonCognitoIdentityMin.CognitoUserAttribute;
+      CognitoUser = _amazonCognitoIdentityJsDistAmazonCognitoIdentityMin.CognitoUser;
     }],
     execute: function () {
       _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {

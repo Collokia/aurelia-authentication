@@ -1,7 +1,6 @@
 import * as LogManager from 'aurelia-logging';
 import {PLATFORM,DOM} from 'aurelia-pal';
 import {parseQueryString,join,buildQueryString} from 'aurelia-path';
-import {AWSCognito,CognitoUserPool,CognitoUserAttribute,CognitoUser} from 'amazon-cognito-identity-js';
 import {inject} from 'aurelia-dependency-injection';
 import {EventAggregator} from 'aurelia-event-aggregator';
 import {deprecated} from 'aurelia-metadata';
@@ -10,6 +9,12 @@ import {Redirect} from 'aurelia-router';
 import {HttpClient} from 'aurelia-fetch-client';
 import {Config,Rest} from 'aurelia-api';
 
+import {
+  AWSCognito,
+  CognitoUserPool,
+  CognitoUserAttribute,
+  CognitoUser
+} from 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
 export declare class Popup {
   constructor();
   open(url?: any, windowName?: any, options?: any): any;

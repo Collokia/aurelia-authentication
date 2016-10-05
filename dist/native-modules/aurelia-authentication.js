@@ -47,7 +47,6 @@ import * as LogManager from 'aurelia-logging';
 import jwtDecode from 'jwt-decode';
 import { PLATFORM, DOM } from 'aurelia-pal';
 import { parseQueryString, join, buildQueryString } from 'aurelia-path';
-import { AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js';
 import { inject } from 'aurelia-dependency-injection';
 import { EventAggregator } from 'aurelia-event-aggregator';
 import { deprecated } from 'aurelia-metadata';
@@ -181,6 +180,8 @@ var parseUrl = function parseUrl(url) {
 
   return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
+
+import { AWSCognito, CognitoUserPool, CognitoUserAttribute, CognitoUser } from 'amazon-cognito-identity-js/dist/amazon-cognito-identity.min';
 
 export var CognitoAuth = function () {
   function CognitoAuth(config) {

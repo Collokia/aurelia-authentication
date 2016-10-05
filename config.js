@@ -50,9 +50,6 @@ System.config({
     "github:jspm/nodelibs-process@0.1.2": {
       "process": "npm:process@0.11.9"
     },
-    "github:jspm/nodelibs-querystring@0.1.0": {
-      "querystring": "npm:querystring@0.2.0"
-    },
     "github:jspm/nodelibs-stream@0.1.0": {
       "stream-browserify": "npm:stream-browserify@1.0.0"
     },
@@ -62,9 +59,6 @@ System.config({
     "github:jspm/nodelibs-timers@0.1.0": {
       "timers-browserify": "npm:timers-browserify@1.4.2"
     },
-    "github:jspm/nodelibs-url@0.1.0": {
-      "url": "npm:url@0.10.3"
-    },
     "github:jspm/nodelibs-util@0.1.0": {
       "util": "npm:util@0.10.3"
     },
@@ -73,16 +67,8 @@ System.config({
     },
     "npm:amazon-cognito-identity-js@1.5.0": {
       "aws-sdk": "npm:aws-sdk@2.6.6",
-      "buffer": "github:jspm/nodelibs-buffer@0.1.0",
-      "events": "github:jspm/nodelibs-events@0.1.1",
-      "fs": "github:jspm/nodelibs-fs@0.1.2",
       "jsbn": "npm:jsbn@0.1.0",
-      "process": "github:jspm/nodelibs-process@0.1.2",
-      "querystring": "github:jspm/nodelibs-querystring@0.1.0",
-      "sjcl": "npm:sjcl@1.0.6",
-      "systemjs-json": "github:systemjs/plugin-json@0.1.2",
-      "url": "github:jspm/nodelibs-url@0.1.0",
-      "util": "github:jspm/nodelibs-util@0.1.0"
+      "sjcl": "npm:sjcl@1.0.6"
     },
     "npm:asn1.js@4.8.1": {
       "bn.js": "npm:bn.js@4.11.6",
