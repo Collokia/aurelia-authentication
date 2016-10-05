@@ -181,7 +181,6 @@ export let CognitoAuth = class CognitoAuth {
         this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
       }
       this._initialized = true;
-      console.log("CognitoAuth initialized");
     } catch (e) {
       console.log("Error initializing CognitoAuth");
     }
