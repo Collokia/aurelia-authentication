@@ -551,7 +551,7 @@ export class AuthService {
   }
 
   cognitoVerificationCode(username, code, password) {
-    return this.cognitoAuth.verificationCode(username, code, password);
+    return this.cognitoAuth.verificationCode(username, code, password) ;
   }
 
   cognitoConfirmUser(username, code){
