@@ -404,7 +404,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
                 return resolve(_this4._normalizeCognitoResponse(result));
               },
               onFailure: function onFailure(err) {
-                return resolve(_this4._normalizeCognitoResponseError(err));
+                return reject(_this4._normalizeCognitoResponseError(err));
               }
             });
           });
@@ -425,12 +425,13 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         CognitoAuth.prototype._normalizeCognitoResponseError = function _normalizeCognitoResponseError(err) {
+          console.log("error", err.message);
           var normalizedResponse = {};
           normalizedResponse.status = "success";
           normalizedResponse[this.config.accessTokenName] = null;
           normalizedResponse[this.config.refreshTokenName] = null;
           normalizedResponse[this.config.idTokenName] = null;
-          normalizedResponse.message = err;
+          normalizedResponse.message = err.message;
           normalizedResponse.otherPossibleAccounts = null;
           normalizedResponse.originalData = null;
           normalizedResponse.oauth_token = null;
@@ -596,11 +597,6 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           this.getRefreshTokenFromResponse = null;
           this.globalValueConverters = ['authFilterValueConverter'];
           this.providers = {
-            cognito: {
-              region: 'us-east-1',
-              userPoolId: 'us-east-1_thePooolId',
-              appClientId: 'theAppClientId'
-            },
 
             facebook: {
               name: 'facebook',

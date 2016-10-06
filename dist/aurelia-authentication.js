@@ -218,7 +218,7 @@ export class CognitoAuth {
     return new Promise((resolve, reject)=> {
       cognitoUser.authenticateUser(authDetails, {
         onSuccess: (result) => resolve(this._normalizeCognitoResponse(result)),
-        onFailure: (err) => resolve(this._normalizeCognitoResponseError(err))
+        onFailure: (err) => reject(this._normalizeCognitoResponseError(err))
       });
     });
   }
@@ -238,12 +238,13 @@ export class CognitoAuth {
   }
 
   _normalizeCognitoResponseError(err){
+    console.log("error", err.message)
     const normalizedResponse = {};
     normalizedResponse.status = "success";
     normalizedResponse[this.config.accessTokenName] = null;
     normalizedResponse[this.config.refreshTokenName] = null;
     normalizedResponse[this.config.idTokenName] = null;
-    normalizedResponse.message = err;
+    normalizedResponse.message = err.message;
     normalizedResponse.otherPossibleAccounts = null;
     normalizedResponse.originalData = null;
     normalizedResponse.oauth_token = null;
@@ -511,11 +512,11 @@ export class BaseConfig {
 //OAuth provider specific related configuration
   // ============================================
   providers = {
-    cognito:{
-      region : 'us-east-1',
-      userPoolId :'us-east-1_thePooolId',
-      appClientId :'theAppClientId'
-    },
+    // cognito:{
+    //   region : 'us-east-1',
+    //   userPoolId :'us-east-1_thePooolId',
+    //   appClientId :'theAppClientId'
+    // },
 
     facebook: {
       name: 'facebook',
