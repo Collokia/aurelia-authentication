@@ -285,6 +285,52 @@ export class CognitoAuth {
       })
     })
   }
+
+  forgotPassword(username){
+    this.initialise();
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    return cognitoUser.forgotPassword({
+      onSuccess: function (result) {
+        console.log('call result: ' + result);
+      },
+      onFailure: function(err) {
+        alert(err);
+      },
+      //Optional automatic callback
+      inputVerificationCode: function(data) {
+        console.log('Code sent to: ' + data);
+      }
+    });
+  }
+
+
+  verificationCode(username, verificationCode, newPassword ){
+    this.initialise();
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    return new Promise((resolve, reject)=>{
+      cognitoUser.confirmPassword(verificationCode, newPassword,
+        { onSuccess: (result) =>{
+          console.log('call result: ' + result);
+          resolve(true)
+        },
+          onFailure: (err)=> {
+            alert(err);
+            reject(err)
+          }
+        })
+    });
+  }
+
 }
 
 export class AuthError extends Error{
@@ -1812,6 +1858,19 @@ export class AuthService {
         return response;
       });
   }
+
+  cognitoForgotPassword(username) {
+    return this.cognitoAuth.forgotPassword(username);
+  }
+
+  cognitoVerificationCode(username, code, password) {
+    return this.cognitoAuth.verificationCode(username, code, password);
+  }
+
+  cognitoConfirmUser(username, code){
+    return this.cognitoAuth.confirmUser(username, code)
+  }
+
 }
 
 @inject(AuthService)

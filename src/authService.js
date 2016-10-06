@@ -545,4 +545,17 @@ export class AuthService {
         return response;
       });
   }
+
+  cognitoForgotPassword(username) {
+    return this.cognitoAuth.forgotPassword(username);
+  }
+
+  cognitoVerificationCode(username, code, password) {
+    return this.cognitoAuth.verificationCode(username, code, password);
+  }
+
+  cognitoConfirmUser(username, code){
+    return this.cognitoAuth.confirmUser(username, code)
+  }
+
 }

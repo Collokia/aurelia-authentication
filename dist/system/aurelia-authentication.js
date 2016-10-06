@@ -475,6 +475,49 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           });
         };
 
+        CognitoAuth.prototype.forgotPassword = function forgotPassword(username) {
+          this.initialise();
+          var userData = {
+            Username: username,
+            Pool: this.userPool
+          };
+
+          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+          return cognitoUser.forgotPassword({
+            onSuccess: function onSuccess(result) {
+              console.log('call result: ' + result);
+            },
+            onFailure: function onFailure(err) {
+              alert(err);
+            },
+
+            inputVerificationCode: function inputVerificationCode(data) {
+              console.log('Code sent to: ' + data);
+            }
+          });
+        };
+
+        CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
+          this.initialise();
+          var userData = {
+            Username: username,
+            Pool: this.userPool
+          };
+
+          var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+          return new Promise(function (resolve, reject) {
+            cognitoUser.confirmPassword(_verificationCode, newPassword, { onSuccess: function onSuccess(result) {
+                console.log('call result: ' + result);
+                resolve(true);
+              },
+              onFailure: function onFailure(err) {
+                alert(err);
+                reject(err);
+              }
+            });
+          });
+        };
+
         return CognitoAuth;
       }());
 
@@ -1686,6 +1729,18 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
 
             return response;
           });
+        };
+
+        AuthService.prototype.cognitoForgotPassword = function cognitoForgotPassword(username) {
+          return this.cognitoAuth.forgotPassword(username);
+        };
+
+        AuthService.prototype.cognitoVerificationCode = function cognitoVerificationCode(username, code, password) {
+          return this.cognitoAuth.verificationCode(username, code, password);
+        };
+
+        AuthService.prototype.cognitoConfirmUser = function cognitoConfirmUser(username, code) {
+          return this.cognitoAuth.confirmUser(username, code);
         };
 
         _createClass(AuthService, [{
