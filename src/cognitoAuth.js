@@ -162,17 +162,21 @@ export class CognitoAuth {
     };
 
     let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-    return cognitoUser.forgotPassword({
-      onSuccess: function (result) {
+    return new Promise((resolve, reject)=> {
+      cognitoUser.forgotPassword({
+        onSuccess:  (result) =>{
         console.log('call result: ' + result);
-      },
-      onFailure: function(err) {
-        alert(err);
-      },
-      //Optional automatic callback
-      inputVerificationCode: function(data) {
-        console.log('Code sent to: ' + data);
-      }
+        resolve(true)
+        },
+        onFailure: (err) => {
+          alert(err);
+          reject(err)
+        },
+        //Optional automatic callback
+        inputVerificationCode: function (data) {
+          console.log('Code sent to: ' + data);
+        }
+      })
     });
   }
 
