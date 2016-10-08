@@ -1,29 +1,29 @@
 export class CognitoAuth {
 
   constructor(config) {
-      this.config = config;
-      AWSCognito.config.region = config.providers.cognito.region;
-      this.userPoolId = config.providers.cognito.userPoolId;
-      this.appClientId = config.providers.cognito.appClientId;
+    this.config = config;
+    AWSCognito.config.region = config.providers.cognito.region;
+    this.userPoolId = config.providers.cognito.userPoolId;
+    this.appClientId = config.providers.cognito.appClientId;
 
 
-      // pool data
-      this.poolData = {
-        UserPoolId: this.userPoolId,
-        ClientId: this.appClientId
-      };
+    // pool data
+    this.poolData = {
+      UserPoolId: this.userPoolId,
+      ClientId: this.appClientId
+    };
 
-      this._initialized = false;
-      try{
-        if(!this._initialized){
-          AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
-          this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
-        }
-        this._initialized = true;
-        // console.log("CognitoAuth initialized")
-      } catch(e){
-        console.log("Error initializing CognitoAuth")
+    this._initialized = false;
+    try {
+      if (!this._initialized) {
+        AWSCognito.config.update({accessKeyId: 'mock', secretAccessKey: 'mock'});
+        this.userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(this.poolData);
       }
+      this._initialized = true;
+      // console.log("CognitoAuth initialized")
+    } catch (e) {
+      console.log("Error initializing CognitoAuth")
+    }
   }
 
 
@@ -90,8 +90,8 @@ export class CognitoAuth {
     });
   }
 
-  _normalizeCognitoResponse(response){
-    console.log("_normalizeCognitoResponse - in",response)
+  _normalizeCognitoResponse(response) {
+    console.log("_normalizeCognitoResponse - in", response)
     const normalizedResponse = {};
     normalizedResponse.status = "success";
     normalizedResponse[this.config.accessTokenName] = response.accessToken.jwtToken;
@@ -104,7 +104,7 @@ export class CognitoAuth {
     return normalizedResponse;
   }
 
-  _normalizeCognitoResponseError(err){
+  _normalizeCognitoResponseError(err) {
     console.log("error", err.message)
     const normalizedResponse = {};
     normalizedResponse.status = "success";
@@ -140,7 +140,7 @@ export class CognitoAuth {
 
   logoutUser() {
     let cognitoUser = this.userPool.getCurrentUser();
-    if (cognitoUser != null){
+    if (cognitoUser != null) {
       cognitoUser.signOut();
     }
   }
@@ -154,8 +154,7 @@ export class CognitoAuth {
     })
   }
 
-  forgotPassword(username){
-    this.initialise();
+  forgotPassword(username) {
     let userData = {
       Username: username,
       Pool: this.userPool
@@ -164,37 +163,38 @@ export class CognitoAuth {
     let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
     return new Promise((resolve, reject)=> {
       cognitoUser.forgotPassword({
-        onSuccess:  (result) =>{
-        console.log('call result: ' + result);
-        resolve(true)
+        onSuccess: (result) => {
+          console.log('call result: ' + result);
+          resolve(true);
         },
         onFailure: (err) => {
           alert(err);
-          reject(err)
+          reject(err);
         },
         //Optional automatic callback
         inputVerificationCode: function (data) {
           console.log('Code sent to: ' + data);
+          resolve(true);
         }
-      })
+      });
     });
   }
 
 
-  verificationCode(username, verificationCode, newPassword ){
-    this.initialise();
+  verificationCode(username, verificationCode, newPassword) {
     let userData = {
       Username: username,
       Pool: this.userPool
     };
 
     let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-    return new Promise((resolve, reject)=>{
+    return new Promise((resolve, reject)=> {
       cognitoUser.confirmPassword(verificationCode, newPassword,
-        { onSuccess: (result) =>{
-          console.log('call result: ' + result);
-          resolve(true)
-        },
+        {
+          onSuccess: (result) => {
+            console.log('call result: ' + result);
+            resolve(true)
+          },
           onFailure: (err)=> {
             alert(err);
             reject(err)
