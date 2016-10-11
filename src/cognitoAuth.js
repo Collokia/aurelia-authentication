@@ -62,7 +62,7 @@ export class CognitoAuth {
           reject(err);
           return;
         }
-        resolve(true);
+        resolve(result);
       });
     });
   }
@@ -105,9 +105,11 @@ export class CognitoAuth {
   }
 
   _normalizeCognitoResponseError(err) {
-    console.log("error", err.message)
+
+    let errorParsed = JSON.parse(JSON.stringify(err));
     const normalizedResponse = {};
-    normalizedResponse.status = "success";
+    normalizedResponse.status = "error";
+    normalizedResponse.code = errorParsed.code;
     normalizedResponse[this.config.accessTokenName] = null;
     normalizedResponse[this.config.refreshTokenName] = null;
     normalizedResponse[this.config.idTokenName] = null;
@@ -200,6 +202,26 @@ export class CognitoAuth {
             reject(err)
           }
         })
+    });
+  }
+
+
+  resendVerificationCode(username){
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise((resolve, reject)=> {
+      cognitoUser.resendConfirmationCode(function(err, result) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
     });
   }
 

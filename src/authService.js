@@ -557,4 +557,8 @@ export class AuthService {
     return this.cognitoAuth.confirmUser(username, code)
   }
 
+  cognitoResendConfirmationCode(username){
+    return this.cognitoAuth.resendVerificationCode(username);
+  }
+
 }
