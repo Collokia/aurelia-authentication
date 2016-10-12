@@ -1,6 +1,6 @@
 var _dec, _class2, _dec2, _class3, _dec3, _class4, _dec4, _class5, _dec5, _dec6, _dec7, _dec8, _dec9, _dec10, _dec11, _class6, _desc, _value, _class7, _dec12, _dec13, _class8, _desc2, _value2, _class9, _dec14, _class11, _dec15, _class12, _dec16, _class13;
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -219,7 +219,7 @@ var CognitoAuth = function () {
     return new Promise(function (resolve, reject) {
       _this3.userPool.signUp(username, password, attributes, null, function (err, result) {
         if (err) {
-          reject(err);
+          reject(JSON.parse(JSON.stringify(err)));
           return;
         }
         resolve(result);
@@ -241,7 +241,7 @@ var CognitoAuth = function () {
           reject(err);
           return;
         }
-        resolve(true);
+        resolve(result);
       });
     });
   };
@@ -290,9 +290,11 @@ var CognitoAuth = function () {
   };
 
   CognitoAuth.prototype._normalizeCognitoResponseError = function _normalizeCognitoResponseError(err) {
-    console.log("error", err.message);
+
+    var errorParsed = JSON.parse(JSON.stringify(err));
     var normalizedResponse = {};
-    normalizedResponse.status = "success";
+    normalizedResponse.status = "error";
+    normalizedResponse.code = errorParsed.code;
     normalizedResponse[this.config.accessTokenName] = null;
     normalizedResponse[this.config.refreshTokenName] = null;
     normalizedResponse[this.config.idTokenName] = null;
@@ -342,29 +344,6 @@ var CognitoAuth = function () {
   };
 
   CognitoAuth.prototype.forgotPassword = function forgotPassword(username) {
-    this.initialise();
-    var userData = {
-      Username: username,
-      Pool: this.userPool
-    };
-
-    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-    return cognitoUser.forgotPassword({
-      onSuccess: function onSuccess(result) {
-        console.log('call result: ' + result);
-      },
-      onFailure: function onFailure(err) {
-        alert(err);
-      },
-
-      inputVerificationCode: function inputVerificationCode(data) {
-        console.log('Code sent to: ' + data);
-      }
-    });
-  };
-
-  CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
-    this.initialise();
     var userData = {
       Username: username,
       Pool: this.userPool
@@ -372,7 +351,34 @@ var CognitoAuth = function () {
 
     var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
     return new Promise(function (resolve, reject) {
-      cognitoUser.confirmPassword(_verificationCode, newPassword, { onSuccess: function onSuccess(result) {
+      cognitoUser.forgotPassword({
+        onSuccess: function onSuccess(result) {
+          console.log('call result: ' + result);
+          resolve(true);
+        },
+        onFailure: function onFailure(err) {
+          alert(err);
+          reject(err);
+        },
+
+        inputVerificationCode: function inputVerificationCode(data) {
+          console.log('Code sent to: ' + data);
+          resolve(true);
+        }
+      });
+    });
+  };
+
+  CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
+    var userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    return new Promise(function (resolve, reject) {
+      cognitoUser.confirmPassword(_verificationCode, newPassword, {
+        onSuccess: function onSuccess(result) {
           console.log('call result: ' + result);
           resolve(true);
         },
@@ -380,6 +386,25 @@ var CognitoAuth = function () {
           alert(err);
           reject(err);
         }
+      });
+    });
+  };
+
+  CognitoAuth.prototype.resendVerificationCode = function resendVerificationCode(username) {
+    var userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise(function (resolve, reject) {
+      cognitoUser.resendConfirmationCode(function (err, result) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
       });
     });
   };
@@ -1476,7 +1501,6 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     var _this17 = this;
 
     return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
-      console.log("register response", response);
       if (_this17.config.loginOnSignup) {
         _this17.setResponseObject(response, true);
       }
@@ -1593,6 +1617,10 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
 
   AuthService.prototype.cognitoConfirmUser = function cognitoConfirmUser(username, code) {
     return this.cognitoAuth.confirmUser(username, code);
+  };
+
+  AuthService.prototype.cognitoResendConfirmationCode = function cognitoResendConfirmationCode(username) {
+    return this.cognitoAuth.resendVerificationCode(username);
   };
 
   _createClass(AuthService, [{

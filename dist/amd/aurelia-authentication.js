@@ -70,7 +70,7 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
   var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
     return typeof obj;
   } : function (obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
   };
 
   var _createClass = function () {
@@ -281,7 +281,7 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
       return new Promise(function (resolve, reject) {
         _this3.userPool.signUp(username, password, attributes, null, function (err, result) {
           if (err) {
-            reject(err);
+            reject(JSON.parse(JSON.stringify(err)));
             return;
           }
           resolve(result);
@@ -303,7 +303,7 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
             reject(err);
             return;
           }
-          resolve(true);
+          resolve(result);
         });
       });
     };
@@ -352,9 +352,11 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     };
 
     CognitoAuth.prototype._normalizeCognitoResponseError = function _normalizeCognitoResponseError(err) {
-      console.log("error", err.message);
+
+      var errorParsed = JSON.parse(JSON.stringify(err));
       var normalizedResponse = {};
-      normalizedResponse.status = "success";
+      normalizedResponse.status = "error";
+      normalizedResponse.code = errorParsed.code;
       normalizedResponse[this.config.accessTokenName] = null;
       normalizedResponse[this.config.refreshTokenName] = null;
       normalizedResponse[this.config.idTokenName] = null;
@@ -404,29 +406,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
     };
 
     CognitoAuth.prototype.forgotPassword = function forgotPassword(username) {
-      this.initialise();
-      var userData = {
-        Username: username,
-        Pool: this.userPool
-      };
-
-      var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-      return cognitoUser.forgotPassword({
-        onSuccess: function onSuccess(result) {
-          console.log('call result: ' + result);
-        },
-        onFailure: function onFailure(err) {
-          alert(err);
-        },
-
-        inputVerificationCode: function inputVerificationCode(data) {
-          console.log('Code sent to: ' + data);
-        }
-      });
-    };
-
-    CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
-      this.initialise();
       var userData = {
         Username: username,
         Pool: this.userPool
@@ -434,7 +413,34 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
 
       var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
       return new Promise(function (resolve, reject) {
-        cognitoUser.confirmPassword(_verificationCode, newPassword, { onSuccess: function onSuccess(result) {
+        cognitoUser.forgotPassword({
+          onSuccess: function onSuccess(result) {
+            console.log('call result: ' + result);
+            resolve(true);
+          },
+          onFailure: function onFailure(err) {
+            alert(err);
+            reject(err);
+          },
+
+          inputVerificationCode: function inputVerificationCode(data) {
+            console.log('Code sent to: ' + data);
+            resolve(true);
+          }
+        });
+      });
+    };
+
+    CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
+      var userData = {
+        Username: username,
+        Pool: this.userPool
+      };
+
+      var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+      return new Promise(function (resolve, reject) {
+        cognitoUser.confirmPassword(_verificationCode, newPassword, {
+          onSuccess: function onSuccess(result) {
             console.log('call result: ' + result);
             resolve(true);
           },
@@ -442,6 +448,25 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
             alert(err);
             reject(err);
           }
+        });
+      });
+    };
+
+    CognitoAuth.prototype.resendVerificationCode = function resendVerificationCode(username) {
+      var userData = {
+        Username: username,
+        Pool: this.userPool
+      };
+
+      var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+      return new Promise(function (resolve, reject) {
+        cognitoUser.resendConfirmationCode(function (err, result) {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(result);
         });
       });
     };
@@ -1537,7 +1562,6 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
       var _this17 = this;
 
       return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
-        console.log("register response", response);
         if (_this17.config.loginOnSignup) {
           _this17.setResponseObject(response, true);
         }
@@ -1654,6 +1678,10 @@ define(["exports", "./authFilterValueConverter", "./authenticatedValueConverter"
 
     AuthService.prototype.cognitoConfirmUser = function cognitoConfirmUser(username, code) {
       return this.cognitoAuth.confirmUser(username, code);
+    };
+
+    AuthService.prototype.cognitoResendConfirmationCode = function cognitoResendConfirmationCode(username) {
+      return this.cognitoAuth.resendVerificationCode(username);
     };
 
     _createClass(AuthService, [{

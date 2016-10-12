@@ -25,6 +25,7 @@ export declare class CognitoAuth {
   getUserAttributes(): any;
   forgotPassword(username?: any): any;
   verificationCode(username?: any, verificationCode?: any, newPassword?: any): any;
+  resendVerificationCode(username?: any): any;
 }
 export declare class AuthFilterValueConverter {
   

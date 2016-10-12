@@ -194,7 +194,7 @@ export let CognitoAuth = class CognitoAuth {
     return new Promise((resolve, reject) => {
       this.userPool.signUp(username, password, attributes, null, (err, result) => {
         if (err) {
-          reject(err);
+          reject(JSON.parse(JSON.stringify(err)));
           return;
         }
         resolve(result);
@@ -216,7 +216,7 @@ export let CognitoAuth = class CognitoAuth {
           reject(err);
           return;
         }
-        resolve(true);
+        resolve(result);
       });
     });
   }
@@ -259,9 +259,11 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   _normalizeCognitoResponseError(err) {
-    console.log("error", err.message);
+
+    let errorParsed = JSON.parse(JSON.stringify(err));
     const normalizedResponse = {};
-    normalizedResponse.status = "success";
+    normalizedResponse.status = "error";
+    normalizedResponse.code = errorParsed.code;
     normalizedResponse[this.config.accessTokenName] = null;
     normalizedResponse[this.config.refreshTokenName] = null;
     normalizedResponse[this.config.idTokenName] = null;
@@ -307,29 +309,6 @@ export let CognitoAuth = class CognitoAuth {
   }
 
   forgotPassword(username) {
-    this.initialise();
-    let userData = {
-      Username: username,
-      Pool: this.userPool
-    };
-
-    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-    return cognitoUser.forgotPassword({
-      onSuccess: function (result) {
-        console.log('call result: ' + result);
-      },
-      onFailure: function (err) {
-        alert(err);
-      },
-
-      inputVerificationCode: function (data) {
-        console.log('Code sent to: ' + data);
-      }
-    });
-  }
-
-  verificationCode(username, verificationCode, newPassword) {
-    this.initialise();
     let userData = {
       Username: username,
       Pool: this.userPool
@@ -337,7 +316,34 @@ export let CognitoAuth = class CognitoAuth {
 
     let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
     return new Promise((resolve, reject) => {
-      cognitoUser.confirmPassword(verificationCode, newPassword, { onSuccess: result => {
+      cognitoUser.forgotPassword({
+        onSuccess: result => {
+          console.log('call result: ' + result);
+          resolve(true);
+        },
+        onFailure: err => {
+          alert(err);
+          reject(err);
+        },
+
+        inputVerificationCode: function (data) {
+          console.log('Code sent to: ' + data);
+          resolve(true);
+        }
+      });
+    });
+  }
+
+  verificationCode(username, verificationCode, newPassword) {
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+    return new Promise((resolve, reject) => {
+      cognitoUser.confirmPassword(verificationCode, newPassword, {
+        onSuccess: result => {
           console.log('call result: ' + result);
           resolve(true);
         },
@@ -345,6 +351,25 @@ export let CognitoAuth = class CognitoAuth {
           alert(err);
           reject(err);
         }
+      });
+    });
+  }
+
+  resendVerificationCode(username) {
+    let userData = {
+      Username: username,
+      Pool: this.userPool
+    };
+
+    let cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
+
+    return new Promise((resolve, reject) => {
+      cognitoUser.resendConfirmationCode(function (err, result) {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
       });
     });
   }
@@ -1366,7 +1391,6 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
 
   cognitoSignUp(username, password, userAttributes, redirectUri) {
     return this.cognitoAuth.registerUser(username, password, userAttributes).then(response => {
-      console.log("register response", response);
       if (this.config.loginOnSignup) {
         this.setResponseObject(response, true);
       }
@@ -1469,6 +1493,10 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
 
   cognitoConfirmUser(username, code) {
     return this.cognitoAuth.confirmUser(username, code);
+  }
+
+  cognitoResendConfirmationCode(username) {
+    return this.cognitoAuth.resendVerificationCode(username);
   }
 
 }, (_applyDecoratedDescriptor(_class9.prototype, "getCurrentToken", [_dec13], Object.getOwnPropertyDescriptor(_class9.prototype, "getCurrentToken"), _class9.prototype)), _class9)) || _class8);
