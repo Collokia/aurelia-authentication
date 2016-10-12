@@ -40,7 +40,7 @@ export class CognitoAuth {
     return new Promise((resolve, reject)=> {
       this.userPool.signUp(username, password, attributes, null, (err, result) => {
         if (err) {
-          reject(err);
+          reject(JSON.parse(JSON.stringify(err)));
           return;
         }
         resolve(result);
