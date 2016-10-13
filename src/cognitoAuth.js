@@ -166,16 +166,13 @@ export class CognitoAuth {
     return new Promise((resolve, reject)=> {
       cognitoUser.forgotPassword({
         onSuccess: (result) => {
-          console.log('call result: ' + result);
           resolve(true);
         },
         onFailure: (err) => {
-          alert(err);
           reject(err);
         },
         //Optional automatic callback
         inputVerificationCode: function (data) {
-          console.log('Code sent to: ' + data);
           resolve(true);
         }
       });
@@ -194,11 +191,9 @@ export class CognitoAuth {
       cognitoUser.confirmPassword(verificationCode, newPassword,
         {
           onSuccess: (result) => {
-            console.log('call result: ' + result);
             resolve(true)
           },
           onFailure: (err)=> {
-            alert(err);
             reject(err)
           }
         })

@@ -386,16 +386,13 @@ var CognitoAuth = function () {
     return new Promise(function (resolve, reject) {
       cognitoUser.forgotPassword({
         onSuccess: function onSuccess(result) {
-          console.log('call result: ' + result);
           resolve(true);
         },
         onFailure: function onFailure(err) {
-          alert(err);
           reject(err);
         },
 
         inputVerificationCode: function inputVerificationCode(data) {
-          console.log('Code sent to: ' + data);
           resolve(true);
         }
       });
@@ -412,11 +409,9 @@ var CognitoAuth = function () {
     return new Promise(function (resolve, reject) {
       cognitoUser.confirmPassword(_verificationCode, newPassword, {
         onSuccess: function onSuccess(result) {
-          console.log('call result: ' + result);
           resolve(true);
         },
         onFailure: function onFailure(err) {
-          alert(err);
           reject(err);
         }
       });
