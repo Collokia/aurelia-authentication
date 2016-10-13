@@ -214,7 +214,7 @@ var parseUrl = function parseUrl(url) {
   return (0, _extend2.default)(true, {}, (0, _aureliaPath.parseQueryString)(url.search), (0, _aureliaPath.parseQueryString)(hash));
 };
 
-var CognitoAuth = function () {
+var CognitoAuth = exports.CognitoAuth = function () {
   function CognitoAuth(config) {
     
 
@@ -399,7 +399,7 @@ var CognitoAuth = function () {
     });
   };
 
-  CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
+  CognitoAuth.prototype.confirmPassword = function confirmPassword(username, verificationCode, newPassword) {
     var userData = {
       Username: username,
       Pool: this.userPool
@@ -407,7 +407,7 @@ var CognitoAuth = function () {
 
     var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
     return new Promise(function (resolve, reject) {
-      cognitoUser.confirmPassword(_verificationCode, newPassword, {
+      cognitoUser.confirmPassword(verificationCode, newPassword, {
         onSuccess: function onSuccess(result) {
           resolve(true);
         },
@@ -439,8 +439,6 @@ var CognitoAuth = function () {
 
   return CognitoAuth;
 }();
-
-exports.CognitoAuth = CognitoAuth;
 
 var AuthError = exports.AuthError = function (_Error) {
   _inherits(AuthError, _Error);
@@ -1638,8 +1636,8 @@ var AuthService = exports.AuthService = (_dec12 = (0, _aureliaDependencyInjectio
     return this.cognitoAuth.forgotPassword(username);
   };
 
-  AuthService.prototype.cognitoVerificationCode = function cognitoVerificationCode(username, code, password) {
-    return this.cognitoAuth.verificationCode(username, code, password);
+  AuthService.prototype.cognitoConfirmPassword = function cognitoConfirmPassword(username, code, password) {
+    return this.cognitoAuth.confirmPassword(username, code, password);
   };
 
   AuthService.prototype.cognitoConfirmUser = function cognitoConfirmUser(username, code) {

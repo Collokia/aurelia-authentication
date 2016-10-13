@@ -549,8 +549,8 @@ export class AuthService {
     return this.cognitoAuth.forgotPassword(username);
   }
 
-  cognitoVerificationCode(username, code, password) {
-    return this.cognitoAuth.verificationCode(username, code, password) ;
+  cognitoConfirmPassword(username, code, password) {
+    return this.cognitoAuth.confirmPassword(username, code, password) ;
   }
 
   cognitoConfirmUser(username, code){

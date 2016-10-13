@@ -181,7 +181,7 @@ var parseUrl = function parseUrl(url) {
   return extend(true, {}, parseQueryString(url.search), parseQueryString(hash));
 };
 
-var CognitoAuth = function () {
+export var CognitoAuth = function () {
   function CognitoAuth(config) {
     
 
@@ -366,7 +366,7 @@ var CognitoAuth = function () {
     });
   };
 
-  CognitoAuth.prototype.verificationCode = function verificationCode(username, _verificationCode, newPassword) {
+  CognitoAuth.prototype.confirmPassword = function confirmPassword(username, verificationCode, newPassword) {
     var userData = {
       Username: username,
       Pool: this.userPool
@@ -374,7 +374,7 @@ var CognitoAuth = function () {
 
     var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
     return new Promise(function (resolve, reject) {
-      cognitoUser.confirmPassword(_verificationCode, newPassword, {
+      cognitoUser.confirmPassword(verificationCode, newPassword, {
         onSuccess: function onSuccess(result) {
           resolve(true);
         },
@@ -406,9 +406,6 @@ var CognitoAuth = function () {
 
   return CognitoAuth;
 }();
-
-export { CognitoAuth };
-
 
 export var AuthError = function (_Error) {
   _inherits(AuthError, _Error);
@@ -1606,8 +1603,8 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     return this.cognitoAuth.forgotPassword(username);
   };
 
-  AuthService.prototype.cognitoVerificationCode = function cognitoVerificationCode(username, code, password) {
-    return this.cognitoAuth.verificationCode(username, code, password);
+  AuthService.prototype.cognitoConfirmPassword = function cognitoConfirmPassword(username, code, password) {
+    return this.cognitoAuth.confirmPassword(username, code, password);
   };
 
   AuthService.prototype.cognitoConfirmUser = function cognitoConfirmUser(username, code) {

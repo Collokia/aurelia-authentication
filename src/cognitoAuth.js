@@ -180,7 +180,7 @@ export class CognitoAuth {
   }
 
 
-  verificationCode(username, verificationCode, newPassword) {
+  confirmPassword(username, verificationCode, newPassword) {
     let userData = {
       Username: username,
       Pool: this.userPool

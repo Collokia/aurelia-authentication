@@ -331,7 +331,7 @@ export let CognitoAuth = class CognitoAuth {
     });
   }
 
-  verificationCode(username, verificationCode, newPassword) {
+  confirmPassword(username, verificationCode, newPassword) {
     let userData = {
       Username: username,
       Pool: this.userPool
@@ -1482,8 +1482,8 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     return this.cognitoAuth.forgotPassword(username);
   }
 
-  cognitoVerificationCode(username, code, password) {
-    return this.cognitoAuth.verificationCode(username, code, password);
+  cognitoConfirmPassword(username, code, password) {
+    return this.cognitoAuth.confirmPassword(username, code, password);
   }
 
   cognitoConfirmUser(username, code) {
