@@ -1385,13 +1385,7 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   }
 
   cognitoSignUp(username, password, userAttributes, redirectUri) {
-    return this.cognitoAuth.registerUser(username, password, userAttributes).then(response => {
-      if (this.config.loginOnSignup) {
-        this.setResponseObject(response, true);
-      }
-      this.authentication.redirect(redirectUri, this.config.signupRedirect);
-      return response;
-    });
+    return this.cognitoAuth.registerUser(username, password, userAttributes);
   }
 
   login(emailOrCredentials, passwordOrOptions, optionsOrRedirectUri, redirectUri) {

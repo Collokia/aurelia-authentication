@@ -167,7 +167,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
       _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
         return typeof obj;
       } : function (obj) {
-        return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+        return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
       };
 
       _createClass = function () {
@@ -1637,19 +1637,11 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         AuthService.prototype.cognitoSignUp = function cognitoSignUp(username, password, userAttributes, redirectUri) {
-          var _this17 = this;
-
-          return this.cognitoAuth.registerUser(username, password, userAttributes).then(function (response) {
-            if (_this17.config.loginOnSignup) {
-              _this17.setResponseObject(response, true);
-            }
-            _this17.authentication.redirect(redirectUri, _this17.config.signupRedirect);
-            return response;
-          });
+          return this.cognitoAuth.registerUser(username, password, userAttributes);
         };
 
         AuthService.prototype.login = function login(emailOrCredentials, passwordOrOptions, optionsOrRedirectUri, redirectUri) {
-          var _this18 = this;
+          var _this17 = this;
 
           var content = void 0;
 
@@ -1670,35 +1662,35 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           }
 
           return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri).then(function (response) {
-            _this18.setResponseObject(response, false);
+            _this17.setResponseObject(response, false);
 
-            _this18.authentication.redirect(redirectUri, _this18.config.loginRedirect);
+            _this17.authentication.redirect(redirectUri, _this17.config.loginRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.cognitoLogin = function cognitoLogin(username, password, optionsOrRedirectUri, redirectUri) {
-          var _this19 = this;
+          var _this18 = this;
 
           return this.cognitoAuth.loginUser(username, password).then(function (response) {
-            _this19.setResponseObject(response, true);
-            _this19.authentication.redirect(redirectUri, _this19.config.loginRedirect);
+            _this18.setResponseObject(response, true);
+            _this18.authentication.redirect(redirectUri, _this18.config.loginRedirect);
             return response;
           });
         };
 
         AuthService.prototype.logout = function logout(redirectUri, query, name) {
-          var _this20 = this;
+          var _this19 = this;
 
           var localLogout = function localLogout(response) {
             return new Promise(function (resolve) {
-              _this20.setResponseObject(null);
+              _this19.setResponseObject(null);
 
-              _this20.authentication.redirect(redirectUri, _this20.config.logoutRedirect, query);
+              _this19.authentication.redirect(redirectUri, _this19.config.logoutRedirect, query);
 
-              if (typeof _this20.onLogout === 'function') {
-                _this20.onLogout(response);
+              if (typeof _this19.onLogout === 'function') {
+                _this19.onLogout(response);
               }
               resolve(response);
             });
@@ -1707,7 +1699,7 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           if (name) {
             if (this.config.providers[name].logoutEndpoint) {
               return this.authentication.logout(name).then(function (logoutResponse) {
-                var stateValue = _this20.authentication.storage.get(name + '_state');
+                var stateValue = _this19.authentication.storage.get(name + '_state');
                 if (logoutResponse.state !== stateValue) {
                   return Promise.reject('OAuth2 response state value differs');
                 }
@@ -1720,27 +1712,27 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         AuthService.prototype.authenticate = function authenticate(name, redirectUri) {
-          var _this21 = this;
+          var _this20 = this;
 
           var userData = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 
           this.eventAggregator.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
           return this.authentication.authenticate(name, userData).then(function (response) {
-            _this21.setResponseObject(response);
-            _this21.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
+            _this20.setResponseObject(response);
+            _this20.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
 
-            _this21.authentication.redirect(redirectUri, _this21.config.loginRedirect);
+            _this20.authentication.redirect(redirectUri, _this20.config.loginRedirect);
 
             return response;
           });
         };
 
         AuthService.prototype.unlink = function unlink(name, redirectUri) {
-          var _this22 = this;
+          var _this21 = this;
 
           var unlinkUrl = this.config.joinBase(this.config.unlinkUrl) + name;
           return this.client.request(this.config.unlinkMethod, unlinkUrl).then(function (response) {
-            _this22.authentication.redirect(redirectUri);
+            _this21.authentication.redirect(redirectUri);
 
             return response;
           });
@@ -1855,13 +1847,13 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         }
 
         FetchConfig.prototype.configure = function configure(client) {
-          var _this23 = this;
+          var _this22 = this;
 
           if (Array.isArray(client)) {
             var _ret = function () {
               var configuredClients = [];
               client.forEach(function (toConfigure) {
-                configuredClients.push(_this23.configure(toConfigure));
+                configuredClients.push(_this22.configure(toConfigure));
               });
 
               return {
@@ -1892,20 +1884,20 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         _createClass(FetchConfig, [{
           key: "interceptor",
           get: function get() {
-            var _this24 = this;
+            var _this23 = this;
 
             return {
               request: function request(_request) {
-                if (!_this24.config.httpInterceptor || !_this24.authService.isAuthenticated()) {
+                if (!_this23.config.httpInterceptor || !_this23.authService.isAuthenticated()) {
                   return _request;
                 }
-                var token = _this24.authService.getAccessToken();
+                var token = _this23.authService.getAccessToken();
 
-                if (_this24.config.authTokenType) {
-                  token = _this24.config.authTokenType + " " + token;
+                if (_this23.config.authTokenType) {
+                  token = _this23.config.authTokenType + " " + token;
                 }
 
-                _request.headers.set(_this24.config.authHeader, token);
+                _request.headers.set(_this23.config.authHeader, token);
 
                 return _request;
               },
@@ -1917,23 +1909,23 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
                   if (_response.status !== 401) {
                     return resolve(_response);
                   }
-                  if (!_this24.config.httpInterceptor || !_this24.authService.isTokenExpired()) {
+                  if (!_this23.config.httpInterceptor || !_this23.authService.isTokenExpired()) {
                     return resolve(_response);
                   }
-                  if (!_this24.config.useRefreshToken || !_this24.authService.getRefreshToken()) {
+                  if (!_this23.config.useRefreshToken || !_this23.authService.getRefreshToken()) {
                     return resolve(_response);
                   }
 
-                  return _this24.authService.updateToken().then(function () {
-                    var token = _this24.authService.getAccessToken();
+                  return _this23.authService.updateToken().then(function () {
+                    var token = _this23.authService.getAccessToken();
 
-                    if (_this24.config.authTokenType) {
-                      token = _this24.config.authTokenType + " " + token;
+                    if (_this23.config.authTokenType) {
+                      token = _this23.config.authTokenType + " " + token;
                     }
 
-                    request.headers.set(_this24.config.authHeader, token);
+                    request.headers.set(_this23.config.authHeader, token);
 
-                    return _this24.client.fetch(request).then(resolve);
+                    return _this23.client.fetch(request).then(resolve);
                   });
                 });
               }
