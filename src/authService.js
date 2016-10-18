@@ -171,10 +171,9 @@ export class AuthService {
    *
    * @param {Object} response The servers response as GOJO
    */
-  setResponseObject(response,cognito) {
+  setResponseObject(response) {
     this.authentication.setResponseObject(response);
-    this.authentication.storage.set(AuthTypeSorageKey, cognito?AuthType.COGNITO:AuthType.REGULAR);
-
+    // this.authentication.storage.set(AuthTypeSorageKey, cognito?AuthType.COGNITO:AuthType.REGULAR);
     this.updateAuthenticated();
   }
 
@@ -334,10 +333,6 @@ export class AuthService {
   updateToken() {
     const authType = this.getLastAuthType();
 
-    if(authType === AuthType.COGNITO){
-      return this.cognitoAuth.getSession().then(response => this.setResponseObject(response, true));
-    }
-
     if (!this.authentication.getRefreshToken()) {
       return Promise.reject(new Error('refreshToken not set'));
     }
@@ -440,7 +435,7 @@ export class AuthService {
 
     return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri)
       .then(response => {
-        this.setResponseObject(response, false);
+        this.setResponseObject(response);
 
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
@@ -452,7 +447,7 @@ export class AuthService {
   cognitoLogin(username, password, optionsOrRedirectUri, redirectUri){
     return this.cognitoAuth.loginUser(username, password)
       .then(response => {
-        this.setResponseObject(response, true);
+        // this.setResponseObject(response, true);
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
         return response;
     });

@@ -1336,9 +1336,8 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     this.timeoutID = 0;
   };
 
-  AuthService.prototype.setResponseObject = function setResponseObject(response, cognito) {
+  AuthService.prototype.setResponseObject = function setResponseObject(response) {
     this.authentication.setResponseObject(response);
-    this.authentication.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
 
     this.updateAuthenticated();
   };
@@ -1433,12 +1432,6 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
 
     var authType = this.getLastAuthType();
 
-    if (authType === AuthType.COGNITO) {
-      return this.cognitoAuth.getSession().then(function (response) {
-        return _this15.setResponseObject(response, true);
-      });
-    }
-
     if (!this.authentication.getRefreshToken()) {
       return Promise.reject(new Error('refreshToken not set'));
     }
@@ -1515,7 +1508,7 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     }
 
     return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri).then(function (response) {
-      _this17.setResponseObject(response, false);
+      _this17.setResponseObject(response);
 
       _this17.authentication.redirect(redirectUri, _this17.config.loginRedirect);
 
@@ -1527,7 +1520,6 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     var _this18 = this;
 
     return this.cognitoAuth.loginUser(username, password).then(function (response) {
-      _this18.setResponseObject(response, true);
       _this18.authentication.redirect(redirectUri, _this18.config.loginRedirect);
       return response;
     });

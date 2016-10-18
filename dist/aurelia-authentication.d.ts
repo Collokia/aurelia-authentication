@@ -365,7 +365,7 @@ export declare class AuthService {
      *
      * @param {Object} response The servers response as GOJO
      */
-  setResponseObject(response?: any, cognito?: any): any;
+  setResponseObject(response?: any): any;
   
   /**
      * Update authenticated. Sets login status and timeout

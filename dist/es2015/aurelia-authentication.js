@@ -1237,9 +1237,8 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     this.timeoutID = 0;
   }
 
-  setResponseObject(response, cognito) {
+  setResponseObject(response) {
     this.authentication.setResponseObject(response);
-    this.authentication.storage.set(AuthTypeSorageKey, cognito ? AuthType.COGNITO : AuthType.REGULAR);
 
     this.updateAuthenticated();
   }
@@ -1332,10 +1331,6 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
   updateToken() {
     const authType = this.getLastAuthType();
 
-    if (authType === AuthType.COGNITO) {
-      return this.cognitoAuth.getSession().then(response => this.setResponseObject(response, true));
-    }
-
     if (!this.authentication.getRefreshToken()) {
       return Promise.reject(new Error('refreshToken not set'));
     }
@@ -1408,7 +1403,7 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     }
 
     return this.client.post(this.config.joinBase(this.config.loginUrl), content, optionsOrRedirectUri).then(response => {
-      this.setResponseObject(response, false);
+      this.setResponseObject(response);
 
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
@@ -1418,7 +1413,6 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
 
   cognitoLogin(username, password, optionsOrRedirectUri, redirectUri) {
     return this.cognitoAuth.loginUser(username, password).then(response => {
-      this.setResponseObject(response, true);
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
       return response;
     });
