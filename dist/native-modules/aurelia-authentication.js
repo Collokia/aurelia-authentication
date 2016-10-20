@@ -821,21 +821,21 @@ export var OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator)
     };
   }
 
-  OAuth1.prototype.open = function open(options, userData) {
+  OAuth1.prototype.open = function open(options, userData, callback) {
     var _this9 = this;
 
     var provider = extend(true, {}, this.defaults, options);
     var serverUrl = this.config.joinBase(provider.url);
 
     if (this.config.platform !== 'mobile') {
-      this.popup = this.popup.open('', provider.name, provider.popupOptions);
+      this.popup = this.popup.open('', provider.name, provider.popupOptions, callback);
     }
 
     return this.config.client.post(serverUrl).then(function (response) {
       var url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
       if (_this9.config.platform === 'mobile') {
-        _this9.popup = _this9.popup.open(url, provider.name, provider.popupOptions);
+        _this9.popup = _this9.popup.open(url, provider.name, provider.popupOptions, callback);
       } else {
         _this9.popup.popupWindow.location = url;
       }
@@ -843,17 +843,21 @@ export var OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator)
       var popupListener = _this9.config.platform === 'mobile' ? _this9.popup.eventListener(provider.redirectUri) : _this9.popup.pollPopup();
 
       return popupListener.then(function (result) {
-        return _this9.exchangeForToken(result, userData, provider);
+        return _this9.exchangeForToken(result, userData, provider, callback);
       });
     });
   };
 
-  OAuth1.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider) {
+  OAuth1.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider, callback) {
     var data = extend(true, {}, userData, oauthData);
     var serverUrl = this.config.joinBase(provider.url);
     var credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken', {});
-    return this.config.client.post(serverUrl, data, { credentials: credentials });
+    if (callback) {
+      return callback(serverUrl, data);
+    } else {
+      return this.config.client.post(serverUrl, data, { credentials: credentials });
+    }
   };
 
   return OAuth1;
@@ -884,7 +888,7 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     };
   }
 
-  OAuth2.prototype.open = function open(options, userData) {
+  OAuth2.prototype.open = function open(options, userData, callback) {
     var _this10 = this;
 
     var provider = extend(true, {}, this.defaults, options);
@@ -899,7 +903,7 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     }
 
     var url = provider.authorizationEndpoint + '?' + buildQueryString(this.buildQuery(provider));
-    var popup = this.popup.open(url, provider.name, provider.popupOptions);
+    var popup = this.popup.open(url, provider.name, provider.popupOptions, callback);
     var openPopup = this.config.platform === 'mobile' ? popup.eventListener(provider.redirectUri) : popup.pollPopup();
 
     return openPopup.then(function (oauthData) {
@@ -909,11 +913,11 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
       if (oauthData.state && oauthData.state !== _this10.storage.get(stateName)) {
         return Promise.reject('OAuth 2.0 state parameter mismatch.');
       }
-      return _this10.exchangeForToken(oauthData, userData, provider);
+      return _this10.exchangeForToken(oauthData, userData, provider, callback);
     });
   };
 
-  OAuth2.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider) {
+  OAuth2.prototype.exchangeForToken = function exchangeForToken(oauthData, userData, provider, callback) {
     var data = extend(true, {}, userData, {
       clientId: provider.clientId,
       redirectUri: provider.redirectUri
@@ -922,7 +926,11 @@ export var OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     var serverUrl = this.config.joinBase(provider.url);
     var credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken', {});
-    return this.config.client.post(serverUrl, data, { credentials: credentials });
+    if (callback) {
+      return callback(serverUrl, data);
+    } else {
+      return this.config.client.post(serverUrl, data, { credentials: credentials });
+    }
   };
 
   OAuth2.prototype.buildQuery = function buildQuery(provider) {
@@ -1182,6 +1190,7 @@ export var Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2,
 
   Authentication.prototype.authenticate = function authenticate(name) {
     var userData = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var callback = arguments[2];
 
     var oauthType = this.config.providers[name].type;
 
@@ -1198,7 +1207,7 @@ export var Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2,
       providerLogin = oauthType === '1.0' ? this.oAuth1 : this.oAuth2;
     }
 
-    return providerLogin.open(this.config.providers[name], userData);
+    return providerLogin.open(this.config.providers[name], userData, callback);
   };
 
   Authentication.prototype.logout = function logout(name) {
@@ -1560,9 +1569,10 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     var _this20 = this;
 
     var userData = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var callback = arguments[3];
 
     this.eventAggregator.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
-    return this.authentication.authenticate(name, userData).then(function (response) {
+    return this.authentication.authenticate(name, userData, callback).then(function (response) {
       _this20.setResponseObject(response);
       _this20.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
 
@@ -1572,12 +1582,25 @@ export var AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     });
   };
 
-  AuthService.prototype.unlink = function unlink(name, redirectUri) {
+  AuthService.prototype.associate = function associate(name, redirectUri) {
     var _this21 = this;
+
+    var userData = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    var callback = arguments[3];
+
+    this.eventAggregator.publish('aurelia-authentication:started', { name: name, redirectUri: redirectUri, userData: userData });
+    return this.authentication.authenticate(name, userData, callback).then(function (response) {
+      _this21.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
+      return response;
+    });
+  };
+
+  AuthService.prototype.unlink = function unlink(name, redirectUri) {
+    var _this22 = this;
 
     var unlinkUrl = this.config.joinBase(this.config.unlinkUrl) + name;
     return this.client.request(this.config.unlinkMethod, unlinkUrl).then(function (response) {
-      _this21.authentication.redirect(redirectUri);
+      _this22.authentication.redirect(redirectUri);
 
       return response;
     });
@@ -1686,13 +1709,13 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
   }
 
   FetchConfig.prototype.configure = function configure(client) {
-    var _this22 = this;
+    var _this23 = this;
 
     if (Array.isArray(client)) {
       var _ret = function () {
         var configuredClients = [];
         client.forEach(function (toConfigure) {
-          configuredClients.push(_this22.configure(toConfigure));
+          configuredClients.push(_this23.configure(toConfigure));
         });
 
         return {
@@ -1723,20 +1746,20 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
   _createClass(FetchConfig, [{
     key: "interceptor",
     get: function get() {
-      var _this23 = this;
+      var _this24 = this;
 
       return {
         request: function request(_request) {
-          if (!_this23.config.httpInterceptor || !_this23.authService.isAuthenticated()) {
+          if (!_this24.config.httpInterceptor || !_this24.authService.isAuthenticated()) {
             return _request;
           }
-          var token = _this23.authService.getAccessToken();
+          var token = _this24.authService.getAccessToken();
 
-          if (_this23.config.authTokenType) {
-            token = _this23.config.authTokenType + " " + token;
+          if (_this24.config.authTokenType) {
+            token = _this24.config.authTokenType + " " + token;
           }
 
-          _request.headers.set(_this23.config.authHeader, token);
+          _request.headers.set(_this24.config.authHeader, token);
 
           return _request;
         },
@@ -1748,23 +1771,23 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
             if (_response.status !== 401) {
               return resolve(_response);
             }
-            if (!_this23.config.httpInterceptor || !_this23.authService.isTokenExpired()) {
+            if (!_this24.config.httpInterceptor || !_this24.authService.isTokenExpired()) {
               return resolve(_response);
             }
-            if (!_this23.config.useRefreshToken || !_this23.authService.getRefreshToken()) {
+            if (!_this24.config.useRefreshToken || !_this24.authService.getRefreshToken()) {
               return resolve(_response);
             }
 
-            return _this23.authService.updateToken().then(function () {
-              var token = _this23.authService.getAccessToken();
+            return _this24.authService.updateToken().then(function () {
+              var token = _this24.authService.getAccessToken();
 
-              if (_this23.config.authTokenType) {
-                token = _this23.config.authTokenType + " " + token;
+              if (_this24.config.authTokenType) {
+                token = _this24.config.authTokenType + " " + token;
               }
 
-              request.headers.set(_this23.config.authHeader, token);
+              request.headers.set(_this24.config.authHeader, token);
 
-              return _this23.client.fetch(request).then(resolve);
+              return _this24.client.fetch(request).then(resolve);
             });
           });
         }

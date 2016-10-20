@@ -502,18 +502,37 @@ export class AuthService {
    *
    * @return {Promise<Object>|Promise<Error>}     Server response as Object
    */
-  authenticate(name, redirectUri, userData = {}) {
+  authenticate(name, redirectUri, userData = {}, callback) {
     this.eventAggregator.publish('aurelia-authentication:started', {name, redirectUri, userData});
-    return this.authentication.authenticate(name, userData)
+    return this.authentication.authenticate(name, userData, callback)
       .then(response => {
         this.setResponseObject(response);
         this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
-
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
         return response;
       });
   }
+
+  /**
+   * Authenticate with third-party and redirect to redirectUri (if set) or redirectUri of config
+   *
+   * @param {String}    name          Name of the provider
+   * @param {[String]}  [redirectUri] [optional redirectUri overwrite]
+   * @param {[{}]}      [userData]    [optional userData for the local authentication server]
+   *
+   * @return {Promise<Object>|Promise<Error>}     Server response as Object
+   */
+  associate(name, redirectUri, userData = {}, callback) {
+    this.eventAggregator.publish('aurelia-authentication:started', {name, redirectUri, userData});
+    return this.authentication.authenticate(name, userData, callback)
+      .then(response => {
+        this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
+        return response;
+      });
+  }
+
+
 
   /**
    * Unlink third-party

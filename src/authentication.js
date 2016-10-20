@@ -244,7 +244,7 @@ export class Authentication {
    *
    * @return {Promise<response>}
    */
-  authenticate(name, userData = {}) {
+  authenticate(name, userData = {}, callback) {
     let oauthType = this.config.providers[name].type;
 
     if (oauthType) {
@@ -260,7 +260,7 @@ export class Authentication {
       providerLogin = (oauthType === '1.0' ? this.oAuth1 : this.oAuth2);
     }
 
-    return providerLogin.open(this.config.providers[name], userData);
+    return providerLogin.open(this.config.providers[name], userData, callback);
   }
 
   logout(name) {

@@ -752,35 +752,39 @@ export let OAuth1 = (_dec3 = inject(Storage, Popup, BaseConfig, EventAggregator)
     };
   }
 
-  open(options, userData) {
+  open(options, userData, callback) {
     const provider = extend(true, {}, this.defaults, options);
     const serverUrl = this.config.joinBase(provider.url);
 
     if (this.config.platform !== 'mobile') {
-      this.popup = this.popup.open('', provider.name, provider.popupOptions);
+      this.popup = this.popup.open('', provider.name, provider.popupOptions, callback);
     }
 
     return this.config.client.post(serverUrl).then(response => {
       const url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
       if (this.config.platform === 'mobile') {
-        this.popup = this.popup.open(url, provider.name, provider.popupOptions);
+        this.popup = this.popup.open(url, provider.name, provider.popupOptions, callback);
       } else {
         this.popup.popupWindow.location = url;
       }
 
       const popupListener = this.config.platform === 'mobile' ? this.popup.eventListener(provider.redirectUri) : this.popup.pollPopup();
 
-      return popupListener.then(result => this.exchangeForToken(result, userData, provider));
+      return popupListener.then(result => this.exchangeForToken(result, userData, provider, callback));
     });
   }
 
-  exchangeForToken(oauthData, userData, provider) {
+  exchangeForToken(oauthData, userData, provider, callback) {
     const data = extend(true, {}, userData, oauthData);
     const serverUrl = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken', {});
-    return this.config.client.post(serverUrl, data, { credentials: credentials });
+    if (callback) {
+      return callback(serverUrl, data);
+    } else {
+      return this.config.client.post(serverUrl, data, { credentials: credentials });
+    }
   }
 }) || _class4);
 
@@ -807,7 +811,7 @@ export let OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     };
   }
 
-  open(options, userData) {
+  open(options, userData, callback) {
     const provider = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
@@ -820,7 +824,7 @@ export let OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     }
 
     const url = provider.authorizationEndpoint + '?' + buildQueryString(this.buildQuery(provider));
-    const popup = this.popup.open(url, provider.name, provider.popupOptions);
+    const popup = this.popup.open(url, provider.name, provider.popupOptions, callback);
     const openPopup = this.config.platform === 'mobile' ? popup.eventListener(provider.redirectUri) : popup.pollPopup();
 
     return openPopup.then(oauthData => {
@@ -830,11 +834,11 @@ export let OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
       if (oauthData.state && oauthData.state !== this.storage.get(stateName)) {
         return Promise.reject('OAuth 2.0 state parameter mismatch.');
       }
-      return this.exchangeForToken(oauthData, userData, provider);
+      return this.exchangeForToken(oauthData, userData, provider, callback);
     });
   }
 
-  exchangeForToken(oauthData, userData, provider) {
+  exchangeForToken(oauthData, userData, provider, callback) {
     const data = extend(true, {}, userData, {
       clientId: provider.clientId,
       redirectUri: provider.redirectUri
@@ -843,7 +847,11 @@ export let OAuth2 = (_dec4 = inject(Storage, Popup, BaseConfig, EventAggregator)
     const serverUrl = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken', {});
-    return this.config.client.post(serverUrl, data, { credentials: credentials });
+    if (callback) {
+      return callback(serverUrl, data);
+    } else {
+      return this.config.client.post(serverUrl, data, { credentials: credentials });
+    }
   }
 
   buildQuery(provider) {
@@ -1100,7 +1108,7 @@ export let Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2,
     this.updateTokenCallstack = [];
   }
 
-  authenticate(name, userData = {}) {
+  authenticate(name, userData = {}, callback) {
     let oauthType = this.config.providers[name].type;
 
     if (oauthType) {
@@ -1116,7 +1124,7 @@ export let Authentication = (_dec5 = inject(Storage, BaseConfig, OAuth1, OAuth2,
       providerLogin = oauthType === '1.0' ? this.oAuth1 : this.oAuth2;
     }
 
-    return providerLogin.open(this.config.providers[name], userData);
+    return providerLogin.open(this.config.providers[name], userData, callback);
   }
 
   logout(name) {
@@ -1445,14 +1453,22 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     }
   }
 
-  authenticate(name, redirectUri, userData = {}) {
+  authenticate(name, redirectUri, userData = {}, callback) {
     this.eventAggregator.publish('aurelia-authentication:started', { name, redirectUri, userData });
-    return this.authentication.authenticate(name, userData).then(response => {
+    return this.authentication.authenticate(name, userData, callback).then(response => {
       this.setResponseObject(response);
       this.eventAggregator.publish('aurelia-authentication:completed', { name, redirectUri, userData });
 
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
+      return response;
+    });
+  }
+
+  associate(name, redirectUri, userData = {}, callback) {
+    this.eventAggregator.publish('aurelia-authentication:started', { name, redirectUri, userData });
+    return this.authentication.authenticate(name, userData, callback).then(response => {
+      this.eventAggregator.publish('aurelia-authentication:completed', { name, redirectUri, userData });
       return response;
     });
   }

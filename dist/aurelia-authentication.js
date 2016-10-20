@@ -890,12 +890,12 @@ export class OAuth1 {
     };
   }
 
-  open(options, userData) {
+  open(options, userData, callback) {
     const provider  = extend(true, {}, this.defaults, options);
     const serverUrl = this.config.joinBase(provider.url);
 
     if (this.config.platform !== 'mobile') {
-      this.popup = this.popup.open('', provider.name, provider.popupOptions);
+      this.popup = this.popup.open('', provider.name, provider.popupOptions, callback);
     }
 
     return this.config.client.post(serverUrl)
@@ -903,7 +903,7 @@ export class OAuth1 {
         const url = provider.authorizationEndpoint + '?' + buildQueryString(response);
 
         if (this.config.platform === 'mobile') {
-          this.popup = this.popup.open(url, provider.name, provider.popupOptions);
+          this.popup = this.popup.open(url, provider.name, provider.popupOptions,callback);
         } else {
           this.popup.popupWindow.location = url;
         }
@@ -912,16 +912,20 @@ export class OAuth1 {
                             ? this.popup.eventListener(provider.redirectUri)
                             : this.popup.pollPopup();
 
-        return popupListener.then(result => this.exchangeForToken(result, userData, provider));
+        return popupListener.then(result => this.exchangeForToken(result, userData, provider, callback));
       });
   }
 
-  exchangeForToken(oauthData, userData, provider) {
+  exchangeForToken(oauthData, userData, provider, callback) {
     const data        = extend(true, {}, userData, oauthData);
     const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken',{});
-    return this.config.client.post(serverUrl, data, {credentials: credentials});
+    if(callback){
+      return callback(serverUrl,data);
+    } else {
+      return this.config.client.post(serverUrl, data, {credentials: credentials});
+    }
   }
 }
 
@@ -949,7 +953,7 @@ export class OAuth2 {
     };
   }
 
-  open(options, userData) {
+  open(options, userData, callback) {
     const provider  = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
@@ -963,7 +967,7 @@ export class OAuth2 {
 
     const url       = provider.authorizationEndpoint
                     + '?' + buildQueryString(this.buildQuery(provider));
-    const popup     = this.popup.open(url, provider.name, provider.popupOptions);
+    const popup     = this.popup.open(url, provider.name, provider.popupOptions, callback);
     const openPopup = (this.config.platform === 'mobile')
                     ? popup.eventListener(provider.redirectUri)
                     : popup.pollPopup();
@@ -979,11 +983,11 @@ export class OAuth2 {
         if (oauthData.state && oauthData.state !== this.storage.get(stateName)) {
           return Promise.reject('OAuth 2.0 state parameter mismatch.');
         }
-        return this.exchangeForToken(oauthData, userData, provider);
+        return this.exchangeForToken(oauthData, userData, provider, callback);
       });
   }
 
-  exchangeForToken(oauthData, userData, provider) {
+  exchangeForToken(oauthData, userData, provider, callback) {
     const data = extend(true, {}, userData, {
       clientId: provider.clientId,
       redirectUri: provider.redirectUri
@@ -992,7 +996,12 @@ export class OAuth2 {
     const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken',{});
-    return this.config.client.post(serverUrl, data, {credentials: credentials});
+    if(callback){
+      return callback(serverUrl,data);
+    } else {
+      return this.config.client.post(serverUrl, data, {credentials: credentials});
+    }
+
   }
 
   buildQuery(provider) {
@@ -1295,7 +1304,7 @@ export class Authentication {
    *
    * @return {Promise<response>}
    */
-  authenticate(name, userData = {}) {
+  authenticate(name, userData = {}, callback) {
     let oauthType = this.config.providers[name].type;
 
     if (oauthType) {
@@ -1311,7 +1320,7 @@ export class Authentication {
       providerLogin = (oauthType === '1.0' ? this.oAuth1 : this.oAuth2);
     }
 
-    return providerLogin.open(this.config.providers[name], userData);
+    return providerLogin.open(this.config.providers[name], userData, callback);
   }
 
   logout(name) {
@@ -1837,9 +1846,9 @@ export class AuthService {
    *
    * @return {Promise<Object>|Promise<Error>}     Server response as Object
    */
-  authenticate(name, redirectUri, userData = {}) {
+  authenticate(name, redirectUri, userData = {}, callback) {
     this.eventAggregator.publish('aurelia-authentication:started', {name, redirectUri, userData});
-    return this.authentication.authenticate(name, userData)
+    return this.authentication.authenticate(name, userData, callback)
       .then(response => {
         this.setResponseObject(response);
         this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
@@ -1849,6 +1858,26 @@ export class AuthService {
         return response;
       });
   }
+
+  /**
+   * Authenticate with third-party and redirect to redirectUri (if set) or redirectUri of config
+   *
+   * @param {String}    name          Name of the provider
+   * @param {[String]}  [redirectUri] [optional redirectUri overwrite]
+   * @param {[{}]}      [userData]    [optional userData for the local authentication server]
+   *
+   * @return {Promise<Object>|Promise<Error>}     Server response as Object
+   */
+  associate(name, redirectUri, userData = {}, callback) {
+    this.eventAggregator.publish('aurelia-authentication:started', {name, redirectUri, userData});
+    return this.authentication.authenticate(name, userData, callback)
+      .then(response => {
+        this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
+        return response;
+      });
+  }
+
+
 
   /**
    * Unlink third-party

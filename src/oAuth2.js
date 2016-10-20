@@ -30,7 +30,7 @@ export class OAuth2 {
     };
   }
 
-  open(options, userData) {
+  open(options, userData, callback) {
     const provider  = extend(true, {}, this.defaults, options);
     const stateName = provider.name + '_state';
 
@@ -44,7 +44,7 @@ export class OAuth2 {
 
     const url       = provider.authorizationEndpoint
                     + '?' + buildQueryString(this.buildQuery(provider));
-    const popup     = this.popup.open(url, provider.name, provider.popupOptions);
+    const popup     = this.popup.open(url, provider.name, provider.popupOptions, callback);
     const openPopup = (this.config.platform === 'mobile')
                     ? popup.eventListener(provider.redirectUri)
                     : popup.pollPopup();
@@ -60,11 +60,11 @@ export class OAuth2 {
         if (oauthData.state && oauthData.state !== this.storage.get(stateName)) {
           return Promise.reject('OAuth 2.0 state parameter mismatch.');
         }
-        return this.exchangeForToken(oauthData, userData, provider);
+        return this.exchangeForToken(oauthData, userData, provider, callback);
       });
   }
 
-  exchangeForToken(oauthData, userData, provider) {
+  exchangeForToken(oauthData, userData, provider, callback) {
     const data = extend(true, {}, userData, {
       clientId: provider.clientId,
       redirectUri: provider.redirectUri
@@ -73,7 +73,12 @@ export class OAuth2 {
     const serverUrl   = this.config.joinBase(provider.url);
     const credentials = this.config.withCredentials ? 'include' : 'same-origin';
     this.eventAggregator.publish('aurelia-authentication:exchangeForToken',{});
-    return this.config.client.post(serverUrl, data, {credentials: credentials});
+    if(callback){
+      return callback(serverUrl,data);
+    } else {
+      return this.config.client.post(serverUrl, data, {credentials: credentials});
+    }
+
   }
 
   buildQuery(provider) {

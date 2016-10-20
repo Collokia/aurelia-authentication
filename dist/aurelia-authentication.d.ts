@@ -226,13 +226,13 @@ export declare class AuthLock {
 }
 export declare class OAuth1 {
   constructor(storage?: any, popup?: any, config?: any, ea?: any);
-  open(options?: any, userData?: any): any;
-  exchangeForToken(oauthData?: any, userData?: any, provider?: any): any;
+  open(options?: any, userData?: any, callback?: any): any;
+  exchangeForToken(oauthData?: any, userData?: any, provider?: any, callback?: any): any;
 }
 export declare class OAuth2 {
   constructor(storage?: any, popup?: any, config?: any, ea?: any);
-  open(options?: any, userData?: any): any;
-  exchangeForToken(oauthData?: any, userData?: any, provider?: any): any;
+  open(options?: any, userData?: any, callback?: any): any;
+  exchangeForToken(oauthData?: any, userData?: any, provider?: any, callback?: any): any;
   buildQuery(provider?: any): any;
   close(options?: any): any;
   buildLogoutQuery(provider?: any): any;
@@ -282,7 +282,7 @@ export declare class Authentication {
      *
      * @return {Promise<response>}
      */
-  authenticate(name?: any, userData?: any): any;
+  authenticate(name?: any, userData?: any, callback?: any): any;
   logout(name?: any): any;
   redirect(redirectUrl?: any, defaultRedirectUrl?: any, query?: any): any;
 }
@@ -503,7 +503,18 @@ export declare class AuthService {
      *
      * @return {Promise<Object>|Promise<Error>}     Server response as Object
      */
-  authenticate(name?: any, redirectUri?: any, userData?: any): any;
+  authenticate(name?: any, redirectUri?: any, userData?: any, callback?: any): any;
+  
+  /**
+     * Authenticate with third-party and redirect to redirectUri (if set) or redirectUri of config
+     *
+     * @param {String}    name          Name of the provider
+     * @param {[String]}  [redirectUri] [optional redirectUri overwrite]
+     * @param {[{}]}      [userData]    [optional userData for the local authentication server]
+     *
+     * @return {Promise<Object>|Promise<Error>}     Server response as Object
+     */
+  associate(name?: any, redirectUri?: any, userData?: any, callback?: any): any;
   
   /**
      * Unlink third-party
