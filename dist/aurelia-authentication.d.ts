@@ -447,7 +447,6 @@ export declare class AuthService {
     * @returns {Object} Payload for JWT, else null
     */
   getTokenPayload(): any;
-  getLastAuthType(): any;
   
   /**
      * Request new accesss token

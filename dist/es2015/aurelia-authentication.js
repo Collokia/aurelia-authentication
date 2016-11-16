@@ -1332,13 +1332,7 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     return this.authentication.getPayload();
   }
 
-  getLastAuthType() {
-    return this.authentication.storage.set(AuthTypeSorageKey);
-  }
-
   updateToken() {
-    const authType = this.getLastAuthType();
-
     if (!this.authentication.getRefreshToken()) {
       return Promise.reject(new Error('refreshToken not set'));
     }
@@ -1458,7 +1452,6 @@ export let AuthService = (_dec12 = inject(Authentication, BaseConfig, BindingSig
     return this.authentication.authenticate(name, userData, callback).then(response => {
       this.setResponseObject(response);
       this.eventAggregator.publish('aurelia-authentication:completed', { name, redirectUri, userData });
-
       this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
       return response;

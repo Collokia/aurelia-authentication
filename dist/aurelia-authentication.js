@@ -1665,18 +1665,12 @@ export class AuthService {
     return this.authentication.getPayload();
   }
 
-  getLastAuthType(){
-    return this.authentication.storage.set(AuthTypeSorageKey);
-  }
-
   /**
    * Request new accesss token
    *
    * @returns {Promise<Response>} Requests new token. can be called multiple times
    */
   updateToken() {
-    const authType = this.getLastAuthType();
-
     if (!this.authentication.getRefreshToken()) {
       return Promise.reject(new Error('refreshToken not set'));
     }
@@ -1852,7 +1846,6 @@ export class AuthService {
       .then(response => {
         this.setResponseObject(response);
         this.eventAggregator.publish('aurelia-authentication:completed', {name, redirectUri, userData});
-
         this.authentication.redirect(redirectUri, this.config.loginRedirect);
 
         return response;

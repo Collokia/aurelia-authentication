@@ -1579,14 +1579,8 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           return this.authentication.getPayload();
         };
 
-        AuthService.prototype.getLastAuthType = function getLastAuthType() {
-          return this.authentication.storage.set(AuthTypeSorageKey);
-        };
-
         AuthService.prototype.updateToken = function updateToken() {
           var _this15 = this;
-
-          var authType = this.getLastAuthType();
 
           if (!this.authentication.getRefreshToken()) {
             return Promise.reject(new Error('refreshToken not set'));
@@ -1722,7 +1716,6 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
           return this.authentication.authenticate(name, userData, callback).then(function (response) {
             _this20.setResponseObject(response);
             _this20.eventAggregator.publish('aurelia-authentication:completed', { name: name, redirectUri: redirectUri, userData: userData });
-
             _this20.authentication.redirect(redirectUri, _this20.config.loginRedirect);
 
             return response;
