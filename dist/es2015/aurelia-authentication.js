@@ -1585,7 +1585,7 @@ export let FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
 
             request.headers.set(this.config.authHeader, token);
 
-            return this.client.fetch(request).then(resolve);
+            return this.httpClient.fetch(request).then(resolve);
           });
         });
       }

@@ -1780,7 +1780,7 @@ export var FetchConfig = (_dec16 = inject(HttpClient, Config, AuthService, BaseC
 
               request.headers.set(_this24.config.authHeader, token);
 
-              return _this24.client.fetch(request).then(resolve);
+              return _this24.httpClient.fetch(request).then(resolve);
             });
           });
         }

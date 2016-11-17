@@ -1810,7 +1810,7 @@ var FetchConfig = exports.FetchConfig = (_dec16 = (0, _aureliaDependencyInjectio
 
               request.headers.set(_this24.config.authHeader, token);
 
-              return _this24.client.fetch(request).then(resolve);
+              return _this24.httpClient.fetch(request).then(resolve);
             });
           });
         }

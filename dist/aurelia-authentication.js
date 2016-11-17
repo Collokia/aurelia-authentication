@@ -2015,7 +2015,7 @@ export class FetchConfig {
 
             request.headers.set(this.config.authHeader, token);
 
-            return this.client.fetch(request).then(resolve);
+            return this.httpClient.fetch(request).then(resolve);
           });
         });
       }
