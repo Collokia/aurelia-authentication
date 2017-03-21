@@ -91,7 +91,6 @@ export class CognitoAuth {
   }
 
   _normalizeCognitoResponse(response) {
-    console.log("_normalizeCognitoResponse - in", response)
     const normalizedResponse = {};
     normalizedResponse.status = "success";
     normalizedResponse[this.config.accessTokenName] = response.accessToken.jwtToken;

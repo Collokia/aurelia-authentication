@@ -411,7 +411,6 @@ System.register(["./authFilterValueConverter", "./authenticatedValueConverter", 
         };
 
         CognitoAuth.prototype._normalizeCognitoResponse = function _normalizeCognitoResponse(response) {
-          console.log("_normalizeCognitoResponse - in", response);
           var normalizedResponse = {};
           normalizedResponse.status = "success";
           normalizedResponse[this.config.accessTokenName] = response.accessToken.jwtToken;
